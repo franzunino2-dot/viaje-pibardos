@@ -1,0 +1,1446 @@
+<title>Viaje Pibardos</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#EEF2F4;
+    --surface:#FFFFFF;
+    --ink:#14213D;
+    --muted:#5B6B75;
+    --line:#D7DEE2;
+    --accent:#D8542A;
+    --accent-ink:#FFF6F1;
+    --teal:#12756D;
+    --teal-soft:#E4F2F0;
+    --amber:#B8791A;
+    --amber-soft:#FBF0DC;
+    --shadow: 0 1px 2px rgba(20,33,61,.05), 0 8px 24px -12px rgba(20,33,61,.18);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#10161C;
+      --surface:#161F27;
+      --ink:#E7ECEF;
+      --muted:#93A3AC;
+      --line:#293640;
+      --accent:#FF8354;
+      --accent-ink:#2A1710;
+      --teal:#4FD3C4;
+      --teal-soft:#12302C;
+      --amber:#F0B347;
+      --amber-soft:#31280F;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 28px -14px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#10161C;
+    --surface:#161F27;
+    --ink:#E7ECEF;
+    --muted:#93A3AC;
+    --line:#293640;
+    --accent:#FF8354;
+    --accent-ink:#2A1710;
+    --teal:#4FD3C4;
+    --teal-soft:#12302C;
+    --amber:#F0B347;
+    --amber-soft:#31280F;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 28px -14px rgba(0,0,0,.55);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    line-height:1.5;
+  }
+  .wrap{
+    max-width:900px;
+    margin:0 auto;
+    padding:40px 20px 80px;
+  }
+  h1,h2,h3{
+    font-family:"Fraunces", Georgia, serif;
+    text-wrap:balance;
+    margin:0;
+  }
+  .num{
+    font-family:"IBM Plex Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  a{color:var(--teal);}
+
+  /* ---------- Ticket header ---------- */
+  .ticket{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:16px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .ticket-top{
+    padding:26px 28px 22px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:20px;
+    flex-wrap:wrap;
+  }
+  .ticket-eyebrow{
+    font-size:11px;
+    letter-spacing:.09em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .ticket-title{
+    font-size:30px;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .ticket-sub{
+    color:var(--muted);
+    font-size:14px;
+    margin-top:6px;
+    max-width:50ch;
+  }
+  .ticket-badge{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:12px;
+    background:var(--teal-soft);
+    color:var(--teal);
+    padding:6px 12px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+  .route{
+    padding:0 28px 26px;
+  }
+  .route-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+  .route-point{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:12px;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+  .route-point strong{
+    display:block;
+    font-size:15px;
+    color:var(--ink);
+    font-weight:600;
+  }
+  .route-track{
+    flex:1;
+    height:6px;
+    border-radius:999px;
+    background:var(--line);
+    position:relative;
+    overflow:hidden;
+  }
+  .route-fill{
+    position:absolute; inset:0 auto 0 0;
+    background:linear-gradient(90deg, var(--accent), var(--teal));
+    border-radius:999px;
+    width:0%;
+    transition:width .8s ease;
+  }
+  .route-plane{
+    position:absolute;
+    top:50%;
+    transform:translate(-50%,-50%);
+    font-size:15px;
+    left:0%;
+    transition:left .8s ease;
+  }
+  .perf{
+    height:0;
+    border-top:2px dashed var(--line);
+    position:relative;
+    margin:0 0;
+  }
+  .perf::before,.perf::after{
+    content:"";
+    position:absolute;
+    top:-11px;
+    width:22px; height:22px;
+    border-radius:50%;
+    background:var(--paper);
+  }
+  .perf::before{left:-31px;}
+  .perf::after{right:-31px;}
+
+  /* ---------- Stat tiles ---------- */
+  .stats-group{padding:0 28px;}
+  .stats-group-label{
+    font-size:10.5px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+    padding:16px 0 2px;
+    opacity:.75;
+  }
+  .stats-group:first-of-type .stats-group-label{padding-top:20px;}
+  .stats-group:last-of-type{padding-bottom:24px;}
+  .stats{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:14px 28px;
+    padding:6px 0 4px;
+  }
+  .stat-label{
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .stat-value{
+    font-size:20px;
+    font-weight:600;
+  }
+  .stat-value.pos{color:var(--teal);}
+  .stat-value.neg{color:var(--accent);}
+  .stat.is-lead .stat-value{font-size:26px;}
+  .stat.is-lead .stat-label{color:var(--teal);}
+  .stat-note{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:4px;
+  }
+  @media (max-width:640px){
+    .stats{grid-template-columns:repeat(2,1fr);}
+  }
+
+  /* ---------- Sections ---------- */
+  section{margin-top:40px;}
+  .section-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:14px;
+    flex-wrap:wrap;
+  }
+  .section-head h2{font-size:19px; font-weight:600;}
+  .section-head .hint{font-size:13px; color:var(--muted);}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow:var(--shadow);
+  }
+
+  /* table */
+  .table-scroll{overflow-x:auto;}
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13.5px;
+    min-width:620px;
+  }
+  thead th{
+    text-align:left;
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--muted);
+    font-weight:600;
+    padding:12px 16px;
+    border-bottom:1px solid var(--line);
+  }
+  tbody td{
+    padding:11px 16px;
+    border-bottom:1px solid var(--line);
+    white-space:nowrap;
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr.is-total td{font-weight:600; border-top:1px solid var(--line);}
+  td.amt-out{color:var(--accent);}
+  td.amt-in{color:var(--teal);}
+  .pill{
+    display:inline-block;
+    font-size:11px;
+    padding:3px 9px;
+    border-radius:999px;
+    font-family:"IBM Plex Sans",sans-serif;
+    font-weight:500;
+  }
+  .pill-estimado{background:var(--amber-soft); color:var(--amber);}
+  .pill-confirmado{background:var(--teal-soft); color:var(--teal);}
+  .pill-loss{background:var(--accent-ink); color:var(--accent);}
+
+  /* editable price */
+  .price-cell{display:flex; align-items:center; gap:6px; justify-content:flex-end;}
+  .price-input{
+    width:66px;
+    font-family:"IBM Plex Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size:13.5px;
+    text-align:right;
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:4px 6px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  .price-input:focus-visible{outline:2px solid var(--teal); outline-offset:1px;}
+  .price-input[readonly]{opacity:.55; cursor:not-allowed;}
+
+  /* desglose por amigo */
+  .expand-toggle{
+    background:none;
+    border:none;
+    color:var(--muted);
+    cursor:pointer;
+    font-size:11px;
+    padding:2px 4px 2px 0;
+    line-height:1;
+  }
+  .expand-toggle:hover{color:var(--teal);}
+  tr.friends-detail-row td{background:var(--paper); padding:14px 16px;}
+  .friends-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px 16px;
+  }
+  .friend-field{display:flex; flex-direction:column; gap:4px;}
+  .friend-field label{
+    font-size:11px;
+    text-transform:capitalize;
+    color:var(--muted);
+  }
+  .friend-input{width:90px;}
+  @media (max-width:640px){
+    .friends-grid{grid-template-columns:repeat(2,1fr);}
+  }
+
+  /* formulario de operaciones */
+  .op-form{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:14px 16px;
+    align-items:end;
+  }
+  .op-form .field{display:flex; flex-direction:column; gap:5px;}
+  .op-form label{
+    font-size:11px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .op-form .price-input{width:100%; text-align:left;}
+  .op-form select.price-input{appearance:auto;}
+  .btn-primary{
+    font-family:"IBM Plex Sans", sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    color:var(--accent-ink);
+    background:var(--accent);
+    border:none;
+    border-radius:8px;
+    padding:10px 18px;
+    cursor:pointer;
+  }
+  .btn-primary:hover{filter:brightness(0.95);}
+  .btn-primary:disabled{opacity:.5; cursor:not-allowed;}
+  @media (max-width:720px){
+    .op-form{grid-template-columns:repeat(2,1fr);}
+  }
+  .save-status{font-size:11.5px; color:var(--muted); margin-top:8px; min-height:1.4em;}
+  .save-status.ok{color:var(--teal);}
+  .save-status.err{color:var(--accent);}
+
+  /* simulador */
+  .sim-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:12px;
+    padding:9px 0;
+    border-bottom:1px solid var(--line);
+    font-size:13.5px;
+  }
+  .sim-row:last-child{border-bottom:none;}
+  .sim-row .lbl{color:var(--muted);}
+  .sim-row .val{
+    font-family:"IBM Plex Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight:600;
+    text-align:right;
+  }
+  .sim-row.lead{padding-top:16px; margin-top:4px; border-top:1px solid var(--line);}
+  .sim-row.lead .lbl{color:var(--ink); font-weight:600;}
+  .sim-row.lead .val{font-size:22px; color:var(--teal);}
+  .sim-row.lead .val.neg{color:var(--accent);}
+
+  /* log */
+  .log{padding:6px 22px 18px;}
+  .log-item{
+    display:grid;
+    grid-template-columns:96px 1fr auto;
+    gap:16px;
+    padding:16px 0;
+    border-bottom:1px solid var(--line);
+    align-items:start;
+  }
+  .log-item:last-child{border-bottom:none;}
+  .log-date{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:12px;
+    color:var(--muted);
+    padding-top:2px;
+  }
+  .log-body .tag{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    font-weight:600;
+    color:var(--accent);
+    margin-bottom:3px;
+  }
+  .log-body .tag.in{color:var(--teal);}
+  .log-body p{margin:0; font-size:13.5px;}
+  .log-amt{
+    font-family:"IBM Plex Mono",monospace;
+    font-weight:600;
+    font-size:14px;
+    white-space:nowrap;
+    padding-top:2px;
+  }
+  .log-right{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:8px;
+  }
+  .log-actions{display:flex; gap:6px;}
+  .log-action-btn{
+    background:none;
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:3px 9px;
+    font-size:11px;
+    color:var(--muted);
+    cursor:pointer;
+    font-family:"IBM Plex Sans",sans-serif;
+    white-space:nowrap;
+  }
+  .log-action-btn:hover{color:var(--teal); border-color:var(--teal);}
+  .log-action-btn.danger:hover{color:var(--accent); border-color:var(--accent);}
+  .log-action-btn.confirm{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+  .log-action-btn:disabled{opacity:.4; cursor:not-allowed;}
+  @media (max-width:560px){
+    .log-item{grid-template-columns:1fr; gap:4px;}
+    .log-amt{padding-top:0;}
+    .log-right{align-items:flex-start;}
+  }
+
+  .note{
+    font-size:13px;
+    color:var(--muted);
+    padding:16px 22px;
+  }
+  .note strong{color:var(--ink);}
+
+  footer{
+    margin-top:44px;
+    padding-top:20px;
+    border-top:1px solid var(--line);
+    font-size:12px;
+    color:var(--muted);
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="ticket">
+    <div class="ticket-top">
+      <div>
+        <div class="ticket-eyebrow">Fondo del viaje &middot; caución + trading</div>
+        <div class="ticket-title">Viaje Pibardos ✈️</div>
+        <div class="ticket-sub">Cuánto vale hoy la cartera, cuánto se debe de caución y cuánto aportaron los amigos.</div>
+      </div>
+      <div class="ticket-badge" id="badge-updated">actualizado —</div>
+    </div>
+    <div class="perf"></div>
+    <div class="stats-group">
+      <div class="stats-group-label">El fondo, en una mirada</div>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">Aportado por los amigos</div>
+          <div class="stat-value num" id="stat-aportes">—</div>
+          <div class="stat-note" id="stat-aportes-note">de los meses confirmados</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Caución tomada</div>
+          <div class="stat-value num" id="stat-caucion-tomada">—</div>
+          <div class="stat-note" id="stat-caucion-tomada-note">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Total del fondo hoy</div>
+          <div class="stat-value num" id="stat-cartera">—</div>
+          <div class="stat-note" id="stat-cartera-note">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Ganancia</div>
+          <div class="stat-value num" id="stat-ganancia">—</div>
+          <div class="stat-note" id="stat-ganancia-note">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="route" style="padding-top:0;">
+      <div class="route-row">
+        <div class="route-point">12 MAY 2026<strong>Toma la caución</strong></div>
+        <div class="route-track">
+          <div class="route-fill" id="route-fill"></div>
+          <div class="route-plane" id="route-plane">✈️</div>
+        </div>
+        <div class="route-point" style="text-align:right;">MAR 2027<strong>Viaje</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <div class="section-head">
+      <h2>Cartera</h2>
+      <div class="hint">solo lo que está invertido hoy &mdash; el efectivo suelto se ve en "Efectivo disponible" arriba</div>
+    </div>
+    <div class="card table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>VN en cartera</th>
+            <th>Costo prom.</th>
+            <th style="text-align:right;">Precio hoy</th>
+            <th>Valor hoy</th>
+            <th>Resultado</th>
+          </tr>
+        </thead>
+        <tbody id="cartera-body"></tbody>
+      </table>
+    </div>
+    <div class="note">Editá el precio de hoy vos mismo cuando cierre el mercado o cuando operes — se guarda solo y ya lo ve cualquiera que tenga el link.<div class="save-status" id="save-status"></div></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Cargar operación</h2>
+      <div class="hint">compra, venta, caución o pago — se suma a la bitácora y recalcula todo</div>
+    </div>
+    <div class="card" style="padding:22px 24px;">
+      <div style="font-size:13px; color:var(--muted); margin-bottom:16px;">Efectivo disponible: <strong id="cash-disponible" class="num" style="color:var(--ink);">—</strong> <span style="font-size:12px;">(lo que no está invertido en ningún ticker ni en caución)</span></div>
+      <form id="op-form" class="op-form">
+        <div class="field">
+          <label for="op-tipo">Tipo</label>
+          <select id="op-tipo" class="price-input">
+            <option value="compra">Compra</option>
+            <option value="venta">Venta</option>
+            <option value="caucion">Toma de caución</option>
+            <option value="pago_caucion">Pago de caución</option>
+            <option value="aporte" hidden>Aporte histórico (solo edición)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="op-fecha">Fecha</label>
+          <input type="date" id="op-fecha" class="price-input">
+        </div>
+        <div class="field op-f-ticker">
+          <label for="op-ticker">Ticker</label>
+          <input type="text" id="op-ticker" class="price-input" value="TZXS8">
+        </div>
+        <div class="field op-f-vn">
+          <label for="op-vn">VN</label>
+          <input type="text" inputmode="numeric" id="op-vn" class="price-input" placeholder="ej: 500000">
+        </div>
+        <div class="field op-f-precio">
+          <label for="op-precio">Precio (%)</label>
+          <input type="text" inputmode="decimal" id="op-precio" class="price-input" placeholder="ej: 96.00">
+        </div>
+        <div class="field op-f-monto" hidden>
+          <label for="op-monto">Monto ($)</label>
+          <input type="text" inputmode="numeric" id="op-monto" class="price-input" placeholder="ej: 2000000">
+        </div>
+        <div class="field op-f-tasa" hidden>
+          <label for="op-tasa">Tasa anual (%)</label>
+          <input type="text" inputmode="decimal" id="op-tasa" class="price-input" value="2">
+        </div>
+        <div class="field" style="grid-column:1/-1;">
+          <label for="op-detalle">Detalle (opcional)</label>
+          <input type="text" id="op-detalle" class="price-input" style="width:100%;" placeholder="una línea para la bitácora">
+        </div>
+        <div style="grid-column:1/-1; display:flex; gap:10px; align-items:center;">
+          <button type="submit" class="btn-primary">Agregar operación</button>
+          <button type="button" id="op-cancel-edit" class="log-action-btn" hidden>Cancelar edición</button>
+        </div>
+      </form>
+      <div class="save-status" id="op-status"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Cauciones</h2>
+      <div class="hint">plata tomada prestada para invertir, con su interés</div>
+    </div>
+    <div class="card table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Capital</th>
+            <th>Equiv. USD</th>
+            <th>Tasa</th>
+            <th>Interés acumulado</th>
+            <th>Saldo hoy</th>
+          </tr>
+        </thead>
+        <tbody id="caucion-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Simulador de cierre</h2>
+      <div class="hint">si vendieras la cartera y cancelaras la caución hoy, a un dólar hipotético</div>
+    </div>
+    <div class="card" style="padding:22px 24px;">
+      <div class="price-cell" style="justify-content:flex-start; gap:10px; margin-bottom:18px;">
+        <label for="sim-dolar" style="font-size:13px; color:var(--muted); white-space:nowrap;">Dólar a probar (ARS por USD)</label>
+        <input id="sim-dolar" class="price-input" style="width:100px;" type="text" inputmode="decimal" placeholder="1500">
+      </div>
+      <div id="sim-output"></div>
+      <div class="note" style="padding:14px 0 0;">Es solo una simulación tuya: no se guarda ni lo ven los demás. Cambiá el número las veces que quieras.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Aportes de los amigos</h2>
+      <div class="hint">80 USD por amigo al dólar del día · confirmados y proyectados</div>
+    </div>
+    <div class="card table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Mes</th>
+            <th>Monto</th>
+            <th>Estado</th>
+            <th>Acumulado</th>
+          </tr>
+        </thead>
+        <tbody id="aportes-body"></tbody>
+      </table>
+    </div>
+    <div class="note">Editá el monto real de cada mes y tildá "Confirmado" a medida que avanza — un mes confirmado baja la deuda de caución de verdad, no es solo referencia. Tocá la flechita para abrir el desglose por amigo: si cargás cuánto puso cada uno, esa suma reemplaza al monto general y cuenta como confirmado sin necesidad de tildar el casillero.</div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Bitácora de operaciones</h2>
+      <div class="hint">todo lo que fue pasando, en orden — editá o eliminá si te confundiste</div>
+    </div>
+    <div class="card log" id="log-body"></div>
+    <div class="note">Si cargaste mal una operación (tipo equivocado, monto mal, etc.), tocá "Editar" para corregirla arriba en el formulario, o "Eliminar" para sacarla del todo. Las ventas que cierran una posición quedan marcadas con el resultado final de esa operación.<div class="save-status" id="log-status"></div></div>
+  </section>
+
+  <footer>
+    <p><strong>Cómo se calcula:</strong> "Aportado por los amigos" es la plata que pusieron ustedes, sumando los meses ya confirmados (o con el desglose por amigo cargado). "Caución tomada" es el capital que se pidió prestado además de esos aportes; hoy esa deuda vale más por el interés simple del 2% anual que se le suma día a día, y cada mes de aportes confirmado se resta directamente de ese saldo, sin bajar nunca de cero. "Total del fondo" es toda la plata del grupo hoy, esté invertida o no: el valor de mercado de las posiciones abiertas (tabla de Cartera) más el efectivo suelto — si vendés todo, este número no cae a cero, porque esa plata sigue siendo tuya, solo que ahora en cash. Por último, "Ganancia" suma lo ya realizado (ventas hechas hasta hoy, por FIFO: se cierra primero lo comprado más viejo) más lo no realizado (lo que sigue en cartera, a precio de hoy contra lo que costó), con el % calculado sobre el capital total invertido (aportes + caución tomada). Los meses todavía en "Estimado" son una proyección y no afectan el saldo de la caución ni el efectivo disponible hasta que se confirman o se desglosan por amigo.</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  // Capturado antes de tocar el DOM: es el documento completo tal como se sirvió,
+  // con el bloque STATE (más abajo en este mismo script) todavía en sus valores originales.
+  const PRISTINE_HTML = '<!doctype html>\n' + document.documentElement.outerHTML;
+
+  const dayMs = 86400000;
+  const fmt = n => Math.round(n).toLocaleString('es-AR');
+  const money = n => (n<0? '-$' + fmt(Math.abs(n)) : '$' + fmt(n));
+  const pctStr = n => (n*100).toLocaleString('es-AR',{minimumFractionDigits:2, maximumFractionDigits:2}) + '%';
+  const fmtDateShort = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  const parseDate = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); };
+
+  const FRIENDS = ['perro','pez','facu','polaco','mugre','chori','dedo','juani'];
+
+  // ---- STATE: todo lo editable de la página vive acá, en formato serializable. ----
+  // Al republicar (capacidad "artifact"), solo se reemplaza este bloque dentro de PRISTINE_HTML.
+  const STATE = /*STATE_START*/{
+    ops: [
+      {date:'2026-05-12', tipo:'aporte', monto:1643500,
+        detalle:'Aportes acumulados de meses anteriores de los amigos, usados para comprar TZXS8 en vez de quedar en efectivo.'},
+      {date:'2026-05-12', tipo:'caucion', monto:7200000, rate:0.02, caucionId:'c1', dolar:1430,
+        detalle:'Toma de caución sobre TZXS8 a 2% anual, para sumar a la inversión (equivalente a USD 5.035 al dólar de ese día).'},
+      {date:'2026-05-12', tipo:'compra', ticker:'TZXS8', vn:1998662, precio:0.8223,
+        detalle:'Compra de TZXS8 con los aportes acumulados.'},
+      {date:'2026-05-12', tipo:'compra', ticker:'TZXS8', vn:8755928, precio:0.8223,
+        detalle:'Compra de TZXS8 con la caución tomada.'},
+      {date:'2026-09-08', tipo:'venta', ticker:'TZXS8', vn:10754590, precio:0.955,
+        detalle:'vendido los cer, vamoa  timbear'},
+      {date:'2026-09-08', tipo:'compra', ticker:'NBIS', vn:782, precio:12788.657299999999,
+        detalle:'Compra de NBIS.'},
+      {date:'2026-09-08', tipo:'venta', ticker:'NBIS', vn:782, precio:14000,
+        detalle:'Compra de NBIS.'},
+      {date:'2026-09-09', tipo:'compra', ticker:'INTC', vn:336, precio:33360.53,
+        detalle:'Compra de INTC.'},
+      {date:'2026-09-09', tipo:'venta', ticker:'INTC', vn:336, precio:34000,
+        detalle:'Venta de INTC.'}
+    ],
+    prices: { TZXS8: 0.96, GOOGL: 9300 },
+    aportesMensuales: [
+      {label:'junio',      date:'2026-06-01', amount:934400, confirmado:true,  friends:{perro:116800,pez:116800,facu:116800,polaco:116800,mugre:116800,chori:116800,dedo:116800,juani:116800}},
+      {label:'julio',      date:'2026-07-01', amount:978560, confirmado:true,  friends:{perro:122320,pez:122320,facu:122320,polaco:122320,mugre:122320,chori:122320,dedo:122320,juani:122320}},
+      {label:'agosto',     date:'2026-08-01', amount:974720, confirmado:true,  friends:{perro:121840,pez:121840,facu:121840,polaco:121840,mugre:121840,chori:121840,dedo:121840,juani:121840}},
+      {label:'septiembre', date:'2026-09-01', amount:976000, confirmado:true,  friends:{perro:122000,pez:122000,facu:122000,polaco:122000,mugre:122000,chori:122000,dedo:122000,juani:122000}},
+      {label:'octubre',    date:'2026-10-01', amount:978560, confirmado:false, friends:{perro:0,pez:0,facu:0,polaco:0,mugre:0,chori:0,dedo:0,juani:0}},
+      {label:'noviembre',  date:'2026-11-01', amount:978560, confirmado:false, friends:{perro:0,pez:0,facu:0,polaco:0,mugre:0,chori:0,dedo:0,juani:0}},
+      {label:'diciembre',  date:'2026-12-01', amount:978560, confirmado:false, friends:{perro:0,pez:0,facu:0,polaco:0,mugre:0,chori:0,dedo:0,juani:0}},
+      {label:'enero',      date:'2027-01-01', amount:978560, confirmado:false, friends:{perro:0,pez:0,facu:0,polaco:0,mugre:0,chori:0,dedo:0,juani:0}},
+      {label:'febrero',    date:'2027-02-01', amount:978560, confirmado:false, friends:{perro:0,pez:0,facu:0,polaco:0,mugre:0,chori:0,dedo:0,juani:0}},
+      {label:'marzo',      date:'2027-03-01', amount:978560, confirmado:false, friends:{perro:0,pez:0,facu:0,polaco:0,mugre:0,chori:0,dedo:0,juani:0}}
+    ],
+    tripDate: '2027-03-01'
+  }/*STATE_END*/;
+
+  // Devuelve el saldo hoy (nunca negativo) y el "excedente": la parte de algún pago
+  // que superó el saldo pendiente en ese momento y por lo tanto no se pudo aplicar
+  // a la caución (esa plata, en la práctica, queda como efectivo disponible).
+  function simulateTranche(principal, start, rate, events, uptoDate){
+    const evs = events.filter(e=>e.date<=uptoDate).sort((a,b)=>a.date-b.date);
+    let bal = principal, last = start, excess = 0;
+    for(const e of evs){
+      const days = (e.date-last)/dayMs;
+      bal = bal + bal*rate*days/365;
+      const pay = Math.min(e.amount, bal);
+      excess += e.amount - pay;
+      bal -= pay;
+      last = e.date;
+    }
+    const days = Math.max(0,(uptoDate-last)/dayMs);
+    bal = bal + bal*rate*days/365;
+    return { bal, excess };
+  }
+
+  function positionsState(ops, uptoDate){
+    const lots = {};
+    let realizedPL = 0;
+    const realizedByOp = new Map();
+    const trades = ops.filter(o=>o.date<=uptoDate && (o.tipo==='compra'||o.tipo==='venta')).sort((a,b)=>a.date-b.date);
+    for(const o of trades){
+      lots[o.ticker] = lots[o.ticker] || [];
+      if(o.tipo==='compra'){
+        lots[o.ticker].push({vn:o.vn, precio:o.precio});
+      } else {
+        let vnToSell = o.vn, costRemoved = 0;
+        while(vnToSell>0 && lots[o.ticker].length){
+          const lot = lots[o.ticker][0];
+          const take = Math.min(lot.vn, vnToSell);
+          costRemoved += take*lot.precio;
+          lot.vn -= take; vnToSell -= take;
+          if(lot.vn<=0) lots[o.ticker].shift();
+        }
+        const opPL = o.vn*o.precio - costRemoved;
+        realizedPL += opPL;
+        realizedByOp.set(o, opPL);
+      }
+    }
+    const holdings = {};
+    for(const t in lots){
+      const vn = lots[t].reduce((s,l)=>s+l.vn,0);
+      const cost = lots[t].reduce((s,l)=>s+l.vn*l.precio,0);
+      if(vn>0.5) holdings[t] = {vn, cost, avgPrecio: cost/vn};
+    }
+    return {holdings, realizedPL, realizedByOp};
+  }
+
+  function caucionesState(ops, uptoDate, extraPagos){
+    extraPagos = extraPagos || [];
+    const tranches = ops.filter(o=>o.tipo==='caucion');
+    const pagos = ops.filter(o=>o.tipo==='pago_caucion')
+      .map(o=>({date:o.date, amount:o.monto, caucionId:o.caucionId}))
+      .concat(extraPagos);
+    let total = 0, excessTotal = 0;
+    const rows = tranches.map(c=>{
+      const myPagos = pagos.filter(p=>(p.caucionId||c.caucionId)===c.caucionId)
+        .map(p=>({date:p.date, amount:p.amount}));
+      const pagado = myPagos.reduce((s,p)=>s+p.amount,0);
+      const { bal: saldoHoy, excess } = simulateTranche(c.monto, c.date, c.rate, myPagos, uptoDate);
+      const interesAcum = saldoHoy - (c.monto - (pagado - excess));
+      total += saldoHoy;
+      excessTotal += excess;
+      return {...c, pagado, saldoHoy, interesAcum};
+    });
+    return {rows, total, excessTotal};
+  }
+
+  function cashBalance(ops, uptoDate){
+    let cash = 0;
+    for(const o of ops.filter(o=>o.date<=uptoDate)){
+      if(o.tipo==='aporte' || o.tipo==='caucion') cash += o.monto;
+      else if(o.tipo==='pago_caucion') cash -= o.monto;
+      else if(o.tipo==='compra') cash -= o.vn*o.precio;
+      else if(o.tipo==='venta') cash += o.vn*o.precio;
+    }
+    return cash;
+  }
+
+  function monthFriendsSum(month){
+    if(!month.friends) return 0;
+    return Object.keys(month.friends).reduce((sum,k)=>sum+(Number(month.friends[k])||0),0);
+  }
+
+  function monthEffectiveAmount(month){
+    const fs = monthFriendsSum(month);
+    return fs>0 ? fs : (month.confirmado ? month.amount : 0);
+  }
+
+  function hydrate(state){
+    return {
+      ops: state.ops.map(o => ({...o, date: parseDate(o.date)})),
+      prices: {...state.prices},
+      aportesMensuales: state.aportesMensuales.map(p => ({...p, date: parseDate(p.date)})),
+      tripDate: parseDate(state.tripDate)
+    };
+  }
+
+  // ---- capacidad "artifact": permite que esta misma página se guarde a sí misma ----
+  let artifactCap = null;
+  let capReady = false;
+  if(window.claude && typeof window.claude.use === 'function'){
+    window.claude.use('artifact').then(cap => { artifactCap = cap; capReady = true; refreshEditability(); });
+  }
+
+  function refreshEditability(){
+    document.querySelectorAll('.price-input').forEach(inp => {
+      inp.readOnly = !artifactCap;
+      inp.title = artifactCap ? '' : 'Esta vista es de solo lectura.';
+    });
+    document.querySelectorAll('.confirm-checkbox').forEach(chk => {
+      chk.disabled = !artifactCap;
+      chk.title = artifactCap ? '' : 'Esta vista es de solo lectura.';
+    });
+    document.querySelectorAll('#op-form select, #op-form button[type="submit"]').forEach(el => {
+      el.disabled = !artifactCap;
+    });
+    document.querySelectorAll('.log-action-btn').forEach(btn => {
+      btn.disabled = !artifactCap;
+      btn.title = artifactCap ? '' : 'Esta vista es de solo lectura.';
+    });
+    const opForm = document.getElementById('op-form');
+    if(opForm) opForm.title = artifactCap ? '' : 'Esta vista es de solo lectura.';
+  }
+
+  function setStatus(msg, cls, targetId){
+    const el = document.getElementById(targetId || 'save-status');
+    if(!el) return;
+    el.textContent = msg || '';
+    el.className = 'save-status' + (cls ? ' '+cls : '');
+  }
+
+  // ---- simulador de cierre: solo local, no se guarda ni se publica ----
+  let LAST_CALC = { valorHoldings: 0, cashDisponible: 0, caucionTotal: 0 };
+  const usdFmt = n => 'US$ ' + Math.abs(n).toLocaleString('es-AR',{minimumFractionDigits:2, maximumFractionDigits:2});
+
+  // ---- desglose por amigo: qué meses están expandidos, solo UI local ----
+  const expandedMonths = new Set();
+
+  // ---- bitácora editable: índice en edición (formulario) y borrado pendiente de confirmar ----
+  let editingIdx = null;
+  let pendingDeleteIdx = null;
+
+  function renderSim(){
+    const out = document.getElementById('sim-output');
+    if(!out) return;
+    const inp = document.getElementById('sim-dolar');
+    const raw = inp ? inp.value.replace(',', '.').trim() : '';
+    const dolar = parseFloat(raw);
+    const { valorHoldings, cashDisponible, caucionTotal } = LAST_CALC;
+    const totalLiquido = valorHoldings + cashDisponible;
+    const neto = totalLiquido - caucionTotal;
+    if(!raw || isNaN(dolar) || dolar<=0){
+      out.innerHTML = `
+        <div class="sim-row"><span class="lbl">Vendés la cartera por</span><span class="val">${money(valorHoldings)}</span></div>
+        <div class="sim-row"><span class="lbl">Más el cash disponible</span><span class="val">${money(cashDisponible)}</span></div>
+        <div class="sim-row"><span class="lbl">Cancelás la caución por</span><span class="val">${money(caucionTotal)}</span></div>
+        <div class="sim-row lead"><span class="lbl">Te quedan en pesos</span><span class="val ${neto<0?'neg':''}">${money(neto)}</span></div>
+      `;
+      return;
+    }
+    out.innerHTML = `
+      <div class="sim-row"><span class="lbl">Vendés la cartera por</span><span class="val">${money(valorHoldings)} &middot; ${usdFmt(valorHoldings/dolar)}</span></div>
+      <div class="sim-row"><span class="lbl">Más el cash disponible</span><span class="val">${money(cashDisponible)} &middot; ${usdFmt(cashDisponible/dolar)}</span></div>
+      <div class="sim-row"><span class="lbl">Cancelás la caución por</span><span class="val">${money(caucionTotal)} &middot; ${usdFmt(caucionTotal/dolar)}</span></div>
+      <div class="sim-row lead"><span class="lbl">Te quedan, cambiados a US$ ${fmt(dolar)}</span><span class="val ${neto<0?'neg':''}">${neto<0?'-':''}${usdFmt(neto/dolar)}</span></div>
+      <div class="sim-row"><span class="lbl">(eso en pesos, antes de cambiar)</span><span class="val">${money(neto)}</span></div>
+    `;
+  }
+
+  {
+    const inp0 = document.getElementById('sim-dolar');
+    if(inp0) inp0.addEventListener('input', renderSim);
+  }
+
+  // ---- formulario "Cargar operación": se conecta una sola vez, no en cada render() ----
+  const OP_FIELDS = {
+    compra:       ['ticker','vn','precio'],
+    venta:        ['ticker','vn','precio'],
+    caucion:      ['monto','tasa'],
+    pago_caucion: ['monto'],
+    aporte:       ['monto']
+  };
+
+  function updateOpFormFields(){
+    const tipo = document.getElementById('op-tipo').value;
+    const shown = OP_FIELDS[tipo] || [];
+    ['ticker','vn','precio','monto','tasa'].forEach(f=>{
+      const wrap = document.querySelector('.op-f-' + f);
+      if(wrap) wrap.hidden = !shown.includes(f);
+    });
+  }
+
+  function updateSubmitLabel(){
+    const btn = document.querySelector('#op-form .btn-primary');
+    const cancelBtn = document.getElementById('op-cancel-edit');
+    if(btn) btn.textContent = editingIdx===null ? 'Agregar operación' : 'Guardar cambios';
+    if(cancelBtn) cancelBtn.hidden = editingIdx===null;
+  }
+
+  function clearOpFormInputs(){
+    document.getElementById('op-vn').value = '';
+    document.getElementById('op-precio').value = '';
+    document.getElementById('op-monto').value = '';
+    document.getElementById('op-detalle').value = '';
+  }
+
+  function startEditOp(idx){
+    const o = STATE.ops[idx];
+    if(!o) return;
+    editingIdx = idx;
+    document.getElementById('op-tipo').value = o.tipo;
+    updateOpFormFields();
+    document.getElementById('op-fecha').value = o.date;
+    if(o.tipo==='compra' || o.tipo==='venta'){
+      document.getElementById('op-ticker').value = o.ticker;
+      document.getElementById('op-vn').value = fmt(o.vn);
+      document.getElementById('op-precio').value = (o.precio*100).toFixed(2);
+    } else if(o.tipo==='caucion'){
+      document.getElementById('op-monto').value = fmt(o.monto);
+      document.getElementById('op-tasa').value = (o.rate*100).toFixed(2);
+    } else if(o.tipo==='pago_caucion' || o.tipo==='aporte'){
+      document.getElementById('op-monto').value = fmt(o.monto);
+    }
+    document.getElementById('op-detalle').value = o.detalle || '';
+    updateSubmitLabel();
+    setStatus('Editando la operación del ' + fmtDateShort(parseDate(o.date)) + '. Cambiá lo que haga falta y guardá.', null, 'op-status');
+    const formEl = document.getElementById('op-form');
+    if(formEl) formEl.scrollIntoView({behavior:'smooth', block:'center'});
+  }
+
+  function cancelEditOp(){
+    editingIdx = null;
+    clearOpFormInputs();
+    updateSubmitLabel();
+  }
+
+  function handleOpSubmit(ev){
+    ev.preventDefault();
+    if(!artifactCap){
+      setStatus('Esta vista es de solo lectura: no se puede cargar operaciones acá.', 'err', 'op-status');
+      return;
+    }
+    const tipo = document.getElementById('op-tipo').value;
+    const fecha = document.getElementById('op-fecha').value;
+    const detalleInput = document.getElementById('op-detalle').value.trim();
+    if(!fecha){
+      setStatus('Poné una fecha.', 'err', 'op-status');
+      return;
+    }
+    const beingEdited = editingIdx!==null ? STATE.ops[editingIdx] : null;
+    let newOp = null;
+    if(tipo==='compra' || tipo==='venta'){
+      const ticker = document.getElementById('op-ticker').value.trim().toUpperCase();
+      const vn = parseFloat(document.getElementById('op-vn').value.replace(/[.\s]/g,'').replace(',', '.'));
+      const precio = parseFloat(document.getElementById('op-precio').value.replace(',', '.'));
+      if(!ticker || isNaN(vn) || vn<=0 || isNaN(precio) || precio<=0){
+        setStatus('Completá ticker, VN y precio válidos.', 'err', 'op-status');
+        return;
+      }
+      const detalleDefault = tipo==='compra'
+        ? `Compra de ${ticker}.`
+        : `Venta de ${ticker}.`;
+      newOp = { date: fecha, tipo, ticker, vn, precio: precio/100, detalle: detalleInput || detalleDefault };
+    } else if(tipo==='caucion'){
+      const monto = parseFloat(document.getElementById('op-monto').value.replace(/[.\s]/g,'').replace(',', '.'));
+      const tasa = parseFloat(document.getElementById('op-tasa').value.replace(',', '.'));
+      if(isNaN(monto) || monto<=0 || isNaN(tasa) || tasa<=0){
+        setStatus('Completá monto y tasa válidos.', 'err', 'op-status');
+        return;
+      }
+      // si estamos editando una caución existente, conserva su id (para no perder el vínculo con sus pagos);
+      // si es nueva, arma un id correlativo.
+      const caucionId = (beingEdited && beingEdited.tipo==='caucion')
+        ? beingEdited.caucionId
+        : 'c' + (STATE.ops.filter(o=>o.tipo==='caucion').length + 1);
+      newOp = { date: fecha, tipo, monto, rate: tasa/100, caucionId, detalle: detalleInput || 'Toma de caución.' };
+    } else if(tipo==='pago_caucion'){
+      const monto = parseFloat(document.getElementById('op-monto').value.replace(/[.\s]/g,'').replace(',', '.'));
+      if(isNaN(monto) || monto<=0){
+        setStatus('Completá un monto válido.', 'err', 'op-status');
+        return;
+      }
+      const caucionId = (beingEdited && beingEdited.caucionId) ? beingEdited.caucionId : 'c1';
+      newOp = { date: fecha, tipo, monto, caucionId, detalle: detalleInput || 'Pago a cuenta de la caución.' };
+    } else if(tipo==='aporte'){
+      // solo llega acá editando el aporte histórico acumulado — no es una opción elegible para cargar de nuevo.
+      const monto = parseFloat(document.getElementById('op-monto').value.replace(/[.\s]/g,'').replace(',', '.'));
+      if(isNaN(monto) || monto<=0){
+        setStatus('Completá un monto válido.', 'err', 'op-status');
+        return;
+      }
+      newOp = { date: fecha, tipo, monto, detalle: detalleInput || (beingEdited && beingEdited.detalle) || 'Aporte acumulado de meses anteriores.' };
+    }
+    if(!newOp) return;
+
+    let okNote;
+    if(tipo==='venta'){
+      const uptoDate = parseDate(fecha);
+      const baseOps = hydrate(STATE).ops.filter((o,i) => editingIdx===null || i!==editingIdx);
+      const before = positionsState(baseOps, uptoDate);
+      const after = positionsState(baseOps.concat([{...newOp, date: uptoDate}]), uptoDate);
+      const pl = after.realizedPL - before.realizedPL;
+      okNote = 'Resultado realizado de esta venta: ' + (pl>=0?'+':'') + money(pl) + '.';
+    }
+
+    if(editingIdx!==null){
+      const idxBeingEdited = editingIdx;
+      saveEditedOp(idxBeingEdited, newOp, okNote || 'Operación actualizada.');
+      editingIdx = null;
+      clearOpFormInputs();
+      updateSubmitLabel();
+    } else {
+      saveNewOp(newOp, okNote);
+      clearOpFormInputs();
+    }
+  }
+
+  {
+    const opTipo = document.getElementById('op-tipo');
+    const opFecha = document.getElementById('op-fecha');
+    const opFormEl = document.getElementById('op-form');
+    const opCancelEdit = document.getElementById('op-cancel-edit');
+    if(opFecha) opFecha.value = new Date().toISOString().slice(0,10);
+    if(opTipo){ opTipo.addEventListener('change', updateOpFormFields); updateOpFormFields(); }
+    if(opFormEl) opFormEl.addEventListener('submit', handleOpSubmit);
+    if(opCancelEdit) opCancelEdit.addEventListener('click', () => { cancelEditOp(); setStatus('', null, 'op-status'); });
+  }
+
+  async function persist(revertFn, statusTarget, okNote){
+    render();
+    setStatus('Guardando…', null, statusTarget);
+    try{
+      const newHtml = PRISTINE_HTML.replace(
+        /\/\*STATE_START\*\/[\s\S]*?\/\*STATE_END\*\//,
+        '/*STATE_START*/' + JSON.stringify(STATE) + '/*STATE_END*/'
+      );
+      await artifactCap.publish(newHtml);
+      setStatus('Guardado ✓ — ya lo ven todos los que tengan el link.' + (okNote ? ' ' + okNote : ''), 'ok', statusTarget);
+    } catch(err){
+      const code = err && err.code;
+      if(code === 'not_granted' || code === 'not_writer'){
+        setStatus('No tenés permiso para editar esta página.', 'err', statusTarget);
+        artifactCap = null;
+        refreshEditability();
+      } else if(code === 'conflict'){
+        setStatus('Alguien más lo actualizó justo ahora; se está mostrando esa versión.', 'err', statusTarget);
+      } else {
+        setStatus('No se pudo guardar (' + (err && err.message ? err.message : 'error') + ').', 'err', statusTarget);
+      }
+      revertFn();
+      render();
+    }
+  }
+
+  function savePrice(ticker, newPrice, revertFn){
+    if(!artifactCap){
+      setStatus('Esta vista es de solo lectura: no se puede editar el precio acá.', 'err');
+      revertFn();
+      return;
+    }
+    STATE.prices[ticker] = newPrice;
+    persist(revertFn);
+  }
+
+  function saveAporteMonto(idx, newAmount, revertFn){
+    if(!artifactCap){
+      setStatus('Esta vista es de solo lectura: no se puede editar acá.', 'err');
+      revertFn();
+      return;
+    }
+    STATE.aportesMensuales[idx].amount = newAmount;
+    persist(revertFn);
+  }
+
+  function toggleAporteConfirmado(idx, checked, revertFn){
+    if(!artifactCap){
+      setStatus('Esta vista es de solo lectura: no se puede editar acá.', 'err');
+      revertFn();
+      return;
+    }
+    STATE.aportesMensuales[idx].confirmado = checked;
+    persist(revertFn);
+  }
+
+  function saveNewOp(newOp, okNote){
+    if(!artifactCap){
+      setStatus('Esta vista es de solo lectura: no se puede cargar operaciones acá.', 'err', 'op-status');
+      return;
+    }
+    STATE.ops.push(newOp);
+    persist(() => { STATE.ops.pop(); }, 'op-status', okNote);
+  }
+
+  function saveEditedOp(idx, updatedOp, okNote){
+    if(!artifactCap){
+      setStatus('Esta vista es de solo lectura: no se puede editar acá.', 'err', 'op-status');
+      return;
+    }
+    const previous = STATE.ops[idx];
+    STATE.ops[idx] = updatedOp;
+    persist(() => { STATE.ops[idx] = previous; }, 'op-status', okNote);
+  }
+
+  function deleteOp(idx){
+    if(!artifactCap){
+      setStatus('Esta vista es de solo lectura: no se puede eliminar acá.', 'err', 'log-status');
+      return;
+    }
+    const previous = STATE.ops[idx];
+    STATE.ops.splice(idx, 1);
+    pendingDeleteIdx = null;
+    persist(() => { STATE.ops.splice(idx, 0, previous); }, 'log-status');
+  }
+
+  function saveFriendPayment(idx, friend, newAmount, revertFn){
+    if(!artifactCap){
+      setStatus('Esta vista es de solo lectura: no se puede editar acá.', 'err');
+      revertFn();
+      return;
+    }
+    if(!STATE.aportesMensuales[idx].friends) STATE.aportesMensuales[idx].friends = {};
+    STATE.aportesMensuales[idx].friends[friend] = newAmount;
+    persist(revertFn);
+  }
+
+  function render(){
+    const TODAY = new Date();
+    const s = hydrate(STATE);
+
+    const pos = caucionesRequiresPositions(s);
+    // los aportes mensuales se usan de verdad para bajar la caución: si hay desglose por
+    // amigo cargado, esa suma manda; si no, el monto general sirve solo si está confirmado.
+    const pagosDesdeAportes = s.aportesMensuales
+      .map(a=>({date:a.date, amount:monthEffectiveAmount(a), caucionId:'c1'}))
+      .filter(p=>p.amount>0);
+    const cauc = caucionesState(s.ops, TODAY, pagosDesdeAportes);
+
+    let valorHoldings = 0, costoCartera = 0;
+    for(const t in pos.holdings){
+      const h = pos.holdings[t];
+      valorHoldings += h.vn * (s.prices[t] !== undefined ? s.prices[t] : h.avgPrecio);
+      costoCartera += h.cost;
+    }
+    const resultadoNoRealizado = valorHoldings - costoCartera;
+    const resultadoRealizado = pos.realizedPL;
+    const aportesConfirmados = s.ops.filter(o=>o.tipo==='aporte' && o.date<=TODAY).reduce((sum,o)=>sum+o.monto,0)
+      + s.aportesMensuales.reduce((sum,a)=>sum+monthEffectiveAmount(a),0);
+    const interesCaucionTotal = cauc.rows.reduce((sum,r)=>sum+r.interesAcum,0);
+    const capitalCaucionTotal = cauc.rows.reduce((sum,r)=>sum+r.monto,0);
+    // capital total puesto en juego: lo que aportaron los amigos + la caución tomada
+    // (no lo que queda de deuda, sino el monto original de cada tranche).
+    const capitalInvertidoTotal = aportesConfirmados + capitalCaucionTotal;
+    // efectivo disponible = lo que entró y salió explícitamente (aportes, caución, compras,
+    // pagos, ventas) más cualquier "excedente" de un aporte que ya no tenía deuda de caución
+    // contra la cual aplicarse (así esa plata no desaparece cuando la caución se termina de pagar).
+    const cashDisponible = cashBalance(s.ops, TODAY) + cauc.excessTotal;
+    // "valor del fondo" = toda la plata del grupo, esté invertida o no: posiciones abiertas
+    // más el efectivo suelto. Si vendiste todo, esto no cae a cero: el cash sigue estando.
+    const valorFondoTotal = valorHoldings + cashDisponible;
+
+    const cashEl = document.getElementById('cash-disponible');
+    if(cashEl) cashEl.textContent = money(cashDisponible);
+
+    document.getElementById('stat-aportes').textContent = money(aportesConfirmados);
+    document.getElementById('stat-aportes-note').textContent = 'de los meses confirmados hasta hoy';
+
+    document.getElementById('stat-caucion-tomada').textContent = money(capitalCaucionTotal);
+    document.getElementById('stat-caucion-tomada-note').textContent =
+      'hoy se debe ' + money(cauc.total) + ' (capital + ' + money(interesCaucionTotal) + ' de interés)';
+
+    document.getElementById('stat-cartera').textContent = money(valorFondoTotal);
+    document.getElementById('stat-cartera-note').textContent =
+      money(valorHoldings) + ' en posiciones + ' + money(cashDisponible) + ' en efectivo' +
+      (cauc.excessTotal>0 ? ' (incluye ' + money(cauc.excessTotal) + ' ya sin deuda de caución)' : '');
+
+    const gananciaTotal = resultadoRealizado + resultadoNoRealizado;
+    const gananciaEl = document.getElementById('stat-ganancia');
+    gananciaEl.textContent = (gananciaTotal>=0?'+':'') + money(gananciaTotal);
+    gananciaEl.className = 'stat-value num' + (gananciaTotal>=0?' pos':' neg');
+    document.getElementById('stat-ganancia-note').textContent =
+      (capitalInvertidoTotal>0 ? (gananciaTotal>=0?'+':'') + pctStr(gananciaTotal/capitalInvertidoTotal) + ' · ' : '') +
+      'realizada ' + (resultadoRealizado>=0?'+':'') + money(resultadoRealizado) + ' + no realizada ' + (resultadoNoRealizado>=0?'+':'') + money(resultadoNoRealizado);
+
+    document.getElementById('badge-updated').textContent = 'actualizado ' + fmtDateShort(TODAY);
+
+    LAST_CALC = { valorHoldings, cashDisponible, caucionTotal: cauc.total };
+    renderSim();
+
+    // ruta / progreso
+    const START = new Date(2026,4,12);
+    const totalSpanDays = (s.tripDate-START)/dayMs;
+    const elapsedDays = Math.min(totalSpanDays, Math.max(0,(TODAY-START)/dayMs));
+    const pctDone = totalSpanDays>0 ? Math.min(100,(elapsedDays/totalSpanDays)*100) : 0;
+    document.getElementById('route-fill').style.width = pctDone+'%';
+    document.getElementById('route-plane').style.left = pctDone+'%';
+
+    // tabla cartera (con precio editable)
+    const carteraBody = document.getElementById('cartera-body');
+    carteraBody.innerHTML = '';
+    const tickers = Object.keys(pos.holdings);
+    if(tickers.length===0){
+      carteraBody.innerHTML = '<tr><td colspan="6" style="color:var(--muted);">Sin posiciones abiertas.</td></tr>';
+    }
+    tickers.forEach(t=>{
+      const h = pos.holdings[t];
+      const precioHoy = s.prices[t] !== undefined ? s.prices[t] : h.avgPrecio;
+      const valorHoy = h.vn*precioHoy;
+      const resultado = valorHoy - h.cost;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${t}</td>
+        <td class="num">${fmt(h.vn)}</td>
+        <td class="num">${pctStr(h.avgPrecio)}</td>
+        <td>
+          <div class="price-cell">
+            <input class="price-input" type="text" inputmode="decimal" data-ticker="${t}" value="${(precioHoy*100).toFixed(2)}">
+            <span>%</span>
+          </div>
+        </td>
+        <td class="num">${money(valorHoy)}</td>
+        <td class="num ${resultado>=0?'amt-in':'amt-out'}">${resultado>=0?'+':''}${money(resultado)} (${pctStr(h.cost? resultado/h.cost:0)})</td>
+      `;
+      carteraBody.appendChild(tr);
+    });
+    carteraBody.querySelectorAll('.price-input').forEach(inp=>{
+      inp.addEventListener('change', () => {
+        const ticker = inp.dataset.ticker;
+        const raw = inp.value.replace(',', '.').replace('%','').trim();
+        const val = parseFloat(raw);
+        const previous = STATE.prices[ticker];
+        if(isNaN(val) || val<=0){
+          setStatus('Ingresá un precio válido, por ejemplo 94.30.', 'err');
+          inp.value = (previous*100).toFixed(2);
+          return;
+        }
+        savePrice(ticker, val/100, () => { inp.value = (previous*100).toFixed(2); });
+      });
+    });
+
+    // tabla cauciones
+    const caucionBody = document.getElementById('caucion-body');
+    caucionBody.innerHTML = '';
+    cauc.rows.forEach(c=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="num">${fmtDateShort(c.date)}</td>
+        <td class="num">${money(c.monto)}</td>
+        <td class="num">${c.dolar ? 'US$ ' + fmt(c.monto/c.dolar) + ' (a $' + fmt(c.dolar) + ')' : '—'}</td>
+        <td class="num">${pctStr(c.rate)} anual</td>
+        <td class="num">${money(c.interesAcum)}</td>
+        <td class="num">${money(c.saldoHoy)}</td>
+      `;
+      caucionBody.appendChild(tr);
+    });
+
+    // tabla aportes: la fila histórica (fija) + los meses editables uno por uno
+    const aportesBody = document.getElementById('aportes-body');
+    aportesBody.innerHTML = '';
+    let acumulado = 0;
+    s.ops.filter(o=>o.tipo==='aporte').forEach(o=>{
+      acumulado += o.monto;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>hasta may-2026</td>
+        <td class="num amt-in">+${fmt(o.monto)}</td>
+        <td><span class="pill pill-confirmado">Confirmado</span></td>
+        <td class="num">${money(acumulado)}</td>
+      `;
+      aportesBody.appendChild(tr);
+    });
+    s.aportesMensuales.forEach((r, idx)=>{
+      const fSum = monthFriendsSum(r);
+      const efectivo = monthEffectiveAmount(r);
+      acumulado += efectivo;
+      const tr = document.createElement('tr');
+      const montoCell = fSum>0
+        ? `<span class="num">${money(fSum)}</span> <span style="font-size:11px; color:var(--muted);">(suma de amigos)</span>`
+        : `<div class="price-cell" style="justify-content:flex-start;">
+             <span>$</span>
+             <input class="amount-input price-input" style="width:96px; text-align:right;" type="text" inputmode="numeric" data-idx="${idx}" value="${fmt(r.amount)}">
+           </div>`;
+      const estadoCell = fSum>0
+        ? `<span class="pill pill-confirmado">Confirmado</span>`
+        : `<label class="confirm-toggle" style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+             <input type="checkbox" class="confirm-checkbox" data-idx="${idx}" ${r.confirmado?'checked':''}>
+             <span class="pill ${r.confirmado?'pill-confirmado':'pill-estimado'}">${r.confirmado?'Confirmado':'Estimado'}</span>
+           </label>`;
+      tr.innerHTML = `
+        <td>
+          <button type="button" class="expand-toggle" data-idx="${idx}" aria-label="Ver desglose por amigo">${expandedMonths.has(idx)?'▾':'▸'}</button>
+          <span style="text-transform:capitalize;">${r.label}</span>
+        </td>
+        <td>${montoCell}</td>
+        <td>${estadoCell}</td>
+        <td class="num">${money(acumulado)}</td>
+      `;
+      aportesBody.appendChild(tr);
+      if(expandedMonths.has(idx)){
+        const friendsObj = r.friends || {};
+        const fieldsHtml = FRIENDS.map(f => `
+          <div class="friend-field">
+            <label>${f}</label>
+            <div class="price-cell" style="justify-content:flex-start;">
+              <span>$</span>
+              <input class="price-input friend-input" type="text" inputmode="numeric" data-idx="${idx}" data-friend="${f}" value="${friendsObj[f] ? fmt(friendsObj[f]) : ''}" placeholder="0">
+            </div>
+          </div>
+        `).join('');
+        const detailTr = document.createElement('tr');
+        detailTr.className = 'friends-detail-row';
+        detailTr.innerHTML = `<td colspan="4"><div class="friends-grid">${fieldsHtml}</div></td>`;
+        aportesBody.appendChild(detailTr);
+      }
+    });
+    aportesBody.querySelectorAll('.expand-toggle').forEach(btn=>{
+      btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.idx);
+        if(expandedMonths.has(idx)) expandedMonths.delete(idx); else expandedMonths.add(idx);
+        render();
+      });
+    });
+    aportesBody.querySelectorAll('.friend-input').forEach(inp=>{
+      inp.addEventListener('change', () => {
+        const idx = Number(inp.dataset.idx);
+        const friend = inp.dataset.friend;
+        const raw = inp.value.replace(/[.\s$]/g,'').replace(',', '.');
+        const previous = (STATE.aportesMensuales[idx].friends && STATE.aportesMensuales[idx].friends[friend]) || 0;
+        if(raw===''){
+          saveFriendPayment(idx, friend, 0, () => { inp.value = previous ? fmt(previous) : ''; });
+          return;
+        }
+        const val = parseFloat(raw);
+        if(isNaN(val) || val<0){
+          setStatus('Ingresá un monto válido.', 'err');
+          inp.value = previous ? fmt(previous) : '';
+          return;
+        }
+        saveFriendPayment(idx, friend, val, () => { inp.value = previous ? fmt(previous) : ''; });
+      });
+    });
+    aportesBody.querySelectorAll('.amount-input').forEach(inp=>{
+      inp.addEventListener('change', () => {
+        const idx = Number(inp.dataset.idx);
+        const raw = inp.value.replace(/[.\s$]/g,'').replace(',', '.');
+        const val = parseFloat(raw);
+        const previous = STATE.aportesMensuales[idx].amount;
+        if(isNaN(val) || val<0){
+          setStatus('Ingresá un monto válido.', 'err');
+          inp.value = fmt(previous);
+          return;
+        }
+        saveAporteMonto(idx, val, () => { inp.value = fmt(previous); });
+      });
+    });
+    aportesBody.querySelectorAll('.confirm-checkbox').forEach(chk=>{
+      chk.addEventListener('change', () => {
+        const idx = Number(chk.dataset.idx);
+        const previous = STATE.aportesMensuales[idx].confirmado;
+        toggleAporteConfirmado(idx, chk.checked, () => { chk.checked = previous; });
+      });
+    });
+
+    // bitácora
+    const TAGS = {
+      aporte: {tag:'Aporte', cls:'in', sign:'+', monto:o=>o.monto},
+      caucion: {tag:'Caución', cls:'', sign:'+', monto:o=>o.monto},
+      pago_caucion: {tag:'Pago caución', cls:'', sign:'-', monto:o=>o.monto},
+      compra: {tag:'Compra', cls:'', sign:'-', monto:o=>o.vn*o.precio},
+      venta: {tag:'Venta', cls:'in', sign:'+', monto:o=>o.vn*o.precio},
+    };
+    const logBody = document.getElementById('log-body');
+    logBody.innerHTML = '';
+    // usamos s.ops (los mismos objetos con los que se calculó "pos") para que
+    // pos.realizedByOp.get(o) matchee por referencia, y su índice coincide 1 a 1 con STATE.ops.
+    s.ops
+      .map((o, idx) => ({ o, idx }))
+      .sort((a, b) => a.o.date - b.o.date)
+      .forEach(({ o, idx }) => {
+        const meta = TAGS[o.tipo];
+        const div = document.createElement('div');
+        div.className = 'log-item';
+        let detalleHtml = o.detalle;
+        if(o.tipo==='venta' && pos.realizedByOp.has(o)){
+          const pl = pos.realizedByOp.get(o);
+          const closed = !pos.holdings[o.ticker];
+          const plCls = pl>=0 ? 'pill-confirmado' : 'pill-loss';
+          detalleHtml += ` <span class="pill ${plCls}">${closed ? 'Posición cerrada' : 'Venta parcial'} &middot; ${pl>=0?'+':''}${money(pl)}</span>`;
+        }
+        const isPendingDelete = pendingDeleteIdx === idx;
+        const actionsHtml = isPendingDelete
+          ? `<button type="button" class="log-action-btn danger confirm" data-idx="${idx}" data-action="confirm-delete">Confirmar</button>
+             <button type="button" class="log-action-btn" data-idx="${idx}" data-action="cancel-delete">Cancelar</button>`
+          : `<button type="button" class="log-action-btn" data-idx="${idx}" data-action="edit">Editar</button>
+             <button type="button" class="log-action-btn danger" data-idx="${idx}" data-action="delete">Eliminar</button>`;
+        div.innerHTML = `
+          <div class="log-date">${fmtDateShort(o.date)}</div>
+          <div class="log-body"><div class="tag ${meta.cls}">${meta.tag}</div><p>${detalleHtml}</p></div>
+          <div class="log-right">
+            <div class="log-amt">${meta.sign}${money(meta.monto(o))}</div>
+            <div class="log-actions">${actionsHtml}</div>
+          </div>
+        `;
+        logBody.appendChild(div);
+      });
+    logBody.querySelectorAll('.log-action-btn').forEach(btn=>{
+      btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.idx);
+        const action = btn.dataset.action;
+        if(action==='edit'){
+          startEditOp(idx);
+        } else if(action==='delete'){
+          pendingDeleteIdx = idx;
+          render();
+        } else if(action==='cancel-delete'){
+          pendingDeleteIdx = null;
+          render();
+        } else if(action==='confirm-delete'){
+          deleteOp(idx);
+        }
+      });
+    });
+
+    refreshEditability();
+  }
+
+  function caucionesRequiresPositions(s){
+    return positionsState(s.ops, new Date());
+  }
+
+  render();
+})();
+</script>
