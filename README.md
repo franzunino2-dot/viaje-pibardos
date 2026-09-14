@@ -48,9 +48,15 @@ Hay que tener presente qué es y qué no es esto: frena que alguien toque los n�
 
 Cada guardado manda la `version` que leyó. Si alguien guardó entremedio, el guardado falla en vez de pisar los cambios del otro: la página avisa, trae la versión nueva y hay que volver a cargar la operación.
 
-## Poner otra base
+## Conectar la base
 
-Los datos de conexión están en el bloque `window.VIAJE_CONFIG` arriba del script principal en `index.html`. La clave de ahí es la **publicable**, pensada para viajar en el browser; la `secret` nunca va al archivo. Vaciando los dos campos la página vuelve a correr sola con el `STATE` embebido.
+El bloque `window.VIAJE_CONFIG`, arriba del script principal en `index.html`, es lo único que hay que completar:
+
+- `SUPABASE_URL` y `SUPABASE_KEY` se sacan de Supabase → Project Settings → API.
+- La clave que va ahí es la **publicable** (`sb_publishable_...` o `anon`), pensada para viajar en el browser. La `secret` / `service_role` **nunca** va al archivo.
+- Con los dos campos vacíos la página corre sola con el `STATE` embebido, de solo lectura.
+
+El proyecto de Supabase tiene que ser propio del viaje, no el de ningún laburo: acá van los nombres de los amigos y cuánto puso cada uno.
 
 ## Deploy
 
