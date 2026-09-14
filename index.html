@@ -47,6 +47,13 @@
   }
 
   *{box-sizing:border-box;}
+
+  /* Esta pagina nacio dentro de un artifact de Claude, cuyo contenedor inyectaba
+     esta regla. Servida sola (GitHub Pages) no estaba, y como varias clases de
+     abajo declaran display:flex, todo lo que el JS oculta con .hidden = true se
+     seguia viendo igual: los campos que no aplican al tipo de operacion elegido,
+     el casillero de la clave ya desbloqueado, etc. */
+  [hidden]{display:none !important;}
   body{
     background:var(--paper);
     color:var(--ink);
