@@ -36,7 +36,7 @@ El estado del fondo entero (operaciones, precios, aportes) vive como **un solo d
 - **Leer**: cualquiera. La policy de `SELECT` de `viaje_estado` está abierta.
 - **Escribir**: nadie directo. `viaje_estado` no tiene policies de `INSERT`/`UPDATE`/`DELETE`, así que la clave publicable que viaja en el browser no alcanza para escribir. La única puerta es la función `viaje_guardar()`, que es `SECURITY DEFINER` y exige la clave de edición; la clave vive en `viaje_config`, que tiene RLS prendido y cero policies (invisible desde el front).
 
-Para cambiar la clave de edición, una línea en el SQL Editor de Supabase:
+La clave de edición **no está en el repo** y no tiene que estar: el esquema inserta un placeholder y la clave real se pone a mano, con una línea en el SQL Editor de Supabase:
 
 ```sql
 update public.viaje_config set clave = 'la-nueva' where id = 'principal';

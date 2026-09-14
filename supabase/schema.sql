@@ -52,10 +52,11 @@ create table if not exists public.viaje_config (
 alter table public.viaje_config enable row level security;
 revoke all on public.viaje_config from anon, authenticated;
 
--- Clave inicial. Para cambiarla después, correr solo esta línea con la nueva:
---   update public.viaje_config set clave = 'la-nueva' where id = 'principal';
+-- OJO: este archivo vive en un repo PUBLICO. No dejar acá la clave de verdad.
+-- Se inserta un placeholder y la clave real se pone aparte, en el SQL Editor:
+--   update public.viaje_config set clave = 'la-que-elijas' where id = 'principal';
 insert into public.viaje_config (id, clave)
-values ('principal', 'pibardos2027')
+values ('principal', 'CAMBIAR-ESTA-CLAVE')
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------
