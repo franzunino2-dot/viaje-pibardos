@@ -446,6 +446,59 @@
   }
   .note strong{color:var(--ink);}
 
+  /* ---------- candado de edición ---------- */
+  .ticket-head-right{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:8px;
+  }
+  .edit-lock{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:6px;
+  }
+  .lock-btn{
+    font-family:"IBM Plex Sans", sans-serif;
+    font-size:12px;
+    background:none;
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:5px 12px;
+    color:var(--muted);
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .lock-btn:hover{color:var(--teal); border-color:var(--teal);}
+  .lock-btn.is-open{color:var(--teal); border-color:var(--teal); background:var(--teal-soft);}
+  .lock-form{display:flex; gap:6px; align-items:center;}
+  .lock-btn-go{
+    color:var(--accent-ink);
+    background:var(--accent);
+    border-color:var(--accent);
+  }
+  .lock-btn-go:hover{color:var(--accent-ink); border-color:var(--accent); filter:brightness(.95);}
+  .lock-input{
+    width:130px;
+    font-family:"IBM Plex Sans", sans-serif;
+    font-size:12.5px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:5px 8px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  .lock-input:focus-visible{outline:2px solid var(--teal); outline-offset:1px;}
+  .lock-note{font-size:11.5px; color:var(--muted); text-align:right; max-width:32ch;}
+  .lock-note.ok{color:var(--teal);}
+  .lock-note.err{color:var(--accent);}
+  @media (max-width:640px){
+    .ticket-head-right{align-items:flex-start;}
+    .edit-lock{align-items:flex-start;}
+    .lock-note{text-align:left;}
+  }
+
   footer{
     margin-top:44px;
     padding-top:20px;
@@ -464,7 +517,17 @@
         <div class="ticket-title">Viaje Pibardos ✈️</div>
         <div class="ticket-sub">Cuánto vale hoy la cartera, cuánto se debe de caución y cuánto aportaron los amigos.</div>
       </div>
-      <div class="ticket-badge" id="badge-updated">actualizado —</div>
+      <div class="ticket-head-right">
+        <div class="ticket-badge" id="badge-updated">actualizado —</div>
+        <div class="edit-lock" id="edit-lock" hidden>
+          <button type="button" class="lock-btn" id="lock-btn">🔒 Desbloquear edición</button>
+          <form class="lock-form" id="lock-form" hidden>
+            <input type="password" id="lock-input" class="lock-input" placeholder="clave" autocomplete="current-password">
+            <button type="submit" class="lock-btn lock-btn-go">Entrar</button>
+          </form>
+          <div class="lock-note" id="lock-note"></div>
+        </div>
+      </div>
     </div>
     <div class="perf"></div>
     <div class="stats-group">
@@ -655,6 +718,21 @@
 </div>
 
 <script>
+/* ---------------------------------------------------------------------------
+   Conexión con la base (Supabase). La clave de abajo es la PUBLICABLE: está
+   pensada para viajar en el browser, cualquiera que abra la página la ve.
+   No sirve para escribir por sí sola — escribir exige además la clave de
+   edición, que se valida del lado del servidor en viaje_guardar().
+   Dejar los dos campos vacíos hace que la página vuelva a funcionar sola,
+   con el STATE embebido, como artifact de Claude.
+--------------------------------------------------------------------------- */
+window.VIAJE_CONFIG = {
+  SUPABASE_URL: 'https://bulhnjecmdqbwbgmuhum.supabase.co',
+  SUPABASE_KEY: 'sb_publishable_sfW_ByfLpYZnis2yp2v1RQ_o6I2Ok3J'
+};
+</script>
+
+<script>
 (function(){
   // Capturado antes de tocar el DOM: es el documento completo tal como se sirvió,
   // con el bloque STATE (más abajo en este mismo script) todavía en sus valores originales.
@@ -816,24 +894,189 @@
     window.claude.use('artifact').then(cap => { artifactCap = cap; capReady = true; refreshEditability(); });
   }
 
+  // ---- backend Supabase: el estado vive en la base, no adentro de este archivo ----
+  // La página igual trae un STATE inicial embebido (más arriba) para poder mostrar
+  // algo aunque la base no conteste; apenas contesta, ese STATE se reemplaza por el
+  // de la base, y todo lo que se guarde va allá.
+  const SB = (window.VIAJE_CONFIG && window.VIAJE_CONFIG.SUPABASE_URL && window.VIAJE_CONFIG.SUPABASE_KEY)
+    ? window.VIAJE_CONFIG
+    : null;
+  const CLAVE_LS = 'viaje_pibardos_clave';
+  const TITULO_SOLO_LECTURA = SB
+    ? 'Desbloqueá la edición con la clave para poder cambiar esto.'
+    : 'Esta vista es de solo lectura.';
+  const MSG_SOLO_LECTURA = (que) => SB
+    ? 'Para ' + que + ' hay que desbloquear la edición con la clave (botón arriba a la derecha).'
+    : 'Esta vista es de solo lectura: no se puede ' + que + ' acá.';
+
+  let sbVersion = null;      // versión del último estado leído (control de concurrencia)
+  let sbOnline = false;      // pudimos hablar con la base al menos una vez
+  let claveEdicion = null;   // clave de edición, si ya la desbloquearon en este browser
+
+  try { claveEdicion = localStorage.getItem(CLAVE_LS) || null; } catch(e){}
+
+  function puedeEditar(){
+    if(SB) return !!(sbOnline && claveEdicion);
+    return !!artifactCap;
+  }
+
+  function sbHeaders(){
+    return {
+      'apikey': SB.SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SB.SUPABASE_KEY,
+      'Content-Type': 'application/json'
+    };
+  }
+
+  async function sbLeer(){
+    const url = SB.SUPABASE_URL + '/rest/v1/viaje_estado?id=eq.principal&select=estado,version,actualizado_en';
+    const res = await fetch(url, { headers: sbHeaders() });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const rows = await res.json();
+    return rows[0] || null;
+  }
+
+  async function sbRpc(fn, body){
+    const res = await fetch(SB.SUPABASE_URL + '/rest/v1/rpc/' + fn, {
+      method: 'POST',
+      headers: sbHeaders(),
+      body: JSON.stringify(body)
+    });
+    const txt = await res.text();
+    let data = null;
+    try { data = txt ? JSON.parse(txt) : null; } catch(e){ data = txt; }
+    if(!res.ok){
+      const msg = (data && data.message) ? String(data.message) : ('HTTP ' + res.status);
+      const err = new Error(msg);
+      err.code = msg;
+      throw err;
+    }
+    return data;
+  }
+
+  function aplicarEstadoRemoto(row){
+    if(!row || !row.estado) return false;
+    const e = row.estado;
+    if(!Array.isArray(e.ops) || !Array.isArray(e.aportesMensuales)) return false;
+    STATE.ops = e.ops;
+    STATE.prices = e.prices || {};
+    STATE.aportesMensuales = e.aportesMensuales;
+    if(e.tripDate) STATE.tripDate = e.tripDate;
+    sbVersion = row.version;
+    return true;
+  }
+
+  function setLockNote(msg, cls){
+    const el = document.getElementById('lock-note');
+    if(!el) return;
+    el.textContent = msg || '';
+    el.className = 'lock-note' + (cls ? ' ' + cls : '');
+  }
+
+  let sincronizando = false;
+  async function sincronizar(forzado){
+    if(!SB || sincronizando) return;
+    if(!forzado && document.hidden) return;
+    sincronizando = true;
+    try{
+      const row = await sbLeer();
+      sbOnline = true;
+      if(!row){
+        setLockNote('La base todavía no tiene datos cargados.', 'err');
+      } else if(row.version !== sbVersion){
+        const eraConocido = sbVersion !== null;
+        if(aplicarEstadoRemoto(row)){
+          if(eraConocido) setLockNote('Se actualizó desde otro dispositivo.', 'ok');
+          render();
+        }
+      }
+    } catch(err){
+      sbOnline = false;
+      setLockNote('Sin conexión con la base — mostrando la última copia.', 'err');
+    } finally {
+      sincronizando = false;
+      refreshEditability();
+    }
+  }
+
+  function refreshLockUI(){
+    const wrap = document.getElementById('edit-lock');
+    const btn = document.getElementById('lock-btn');
+    const form = document.getElementById('lock-form');
+    if(!wrap || !btn || !form) return;
+    // El candado solo tiene sentido con base propia: dentro de un artifact de Claude
+    // el permiso lo da Claude y no hay clave que pedir.
+    wrap.hidden = !SB;
+    if(!SB) return;
+    const abierto = puedeEditar();
+    btn.textContent = abierto ? '✓ Podés editar · bloquear' : '🔒 Desbloquear edición';
+    btn.classList.toggle('is-open', abierto);
+    if(abierto) form.hidden = true;
+  }
+
+  async function verificarClave(candidata){
+    const limpia = (candidata || '').trim();
+    if(!limpia){ setLockNote('Escribí la clave.', 'err'); return; }
+    setLockNote('Verificando…', null);
+    try{
+      const ok = await sbRpc('viaje_clave_ok', { p_clave: limpia });
+      if(ok === true){
+        claveEdicion = limpia;
+        try { localStorage.setItem(CLAVE_LS, limpia); } catch(e){}
+        setLockNote('Listo, ya podés cargar operaciones.', 'ok');
+        refreshEditability();
+      } else {
+        setLockNote('Clave incorrecta.', 'err');
+      }
+    } catch(err){
+      setLockNote('No se pudo verificar la clave.', 'err');
+    }
+  }
+
+  function bloquearEdicion(){
+    claveEdicion = null;
+    try { localStorage.removeItem(CLAVE_LS); } catch(e){}
+    setLockNote('Edición bloqueada.', null);
+    refreshEditability();
+  }
+
+  {
+    const lockBtn = document.getElementById('lock-btn');
+    const lockForm = document.getElementById('lock-form');
+    const lockInput = document.getElementById('lock-input');
+    if(lockBtn) lockBtn.addEventListener('click', () => {
+      if(puedeEditar()){ bloquearEdicion(); return; }
+      if(lockForm){
+        lockForm.hidden = !lockForm.hidden;
+        if(!lockForm.hidden && lockInput) lockInput.focus();
+      }
+    });
+    if(lockForm) lockForm.addEventListener('submit', ev => {
+      ev.preventDefault();
+      verificarClave(lockInput ? lockInput.value : '');
+      if(lockInput) lockInput.value = '';
+    });
+  }
+
   function refreshEditability(){
+    refreshLockUI();
     document.querySelectorAll('.price-input').forEach(inp => {
-      inp.readOnly = !artifactCap;
-      inp.title = artifactCap ? '' : 'Esta vista es de solo lectura.';
+      inp.readOnly = !puedeEditar();
+      inp.title = puedeEditar() ? '' : TITULO_SOLO_LECTURA;
     });
     document.querySelectorAll('.confirm-checkbox').forEach(chk => {
-      chk.disabled = !artifactCap;
-      chk.title = artifactCap ? '' : 'Esta vista es de solo lectura.';
+      chk.disabled = !puedeEditar();
+      chk.title = puedeEditar() ? '' : TITULO_SOLO_LECTURA;
     });
     document.querySelectorAll('#op-form select, #op-form button[type="submit"]').forEach(el => {
-      el.disabled = !artifactCap;
+      el.disabled = !puedeEditar();
     });
     document.querySelectorAll('.log-action-btn').forEach(btn => {
-      btn.disabled = !artifactCap;
-      btn.title = artifactCap ? '' : 'Esta vista es de solo lectura.';
+      btn.disabled = !puedeEditar();
+      btn.title = puedeEditar() ? '' : TITULO_SOLO_LECTURA;
     });
     const opForm = document.getElementById('op-form');
-    if(opForm) opForm.title = artifactCap ? '' : 'Esta vista es de solo lectura.';
+    if(opForm) opForm.title = puedeEditar() ? '' : TITULO_SOLO_LECTURA;
   }
 
   function setStatus(msg, cls, targetId){
@@ -950,8 +1193,8 @@
 
   function handleOpSubmit(ev){
     ev.preventDefault();
-    if(!artifactCap){
-      setStatus('Esta vista es de solo lectura: no se puede cargar operaciones acá.', 'err', 'op-status');
+    if(!puedeEditar()){
+      setStatus(MSG_SOLO_LECTURA('cargar operaciones'), 'err', 'op-status');
       return;
     }
     const tipo = document.getElementById('op-tipo').value;
@@ -1044,6 +1287,16 @@
     render();
     setStatus('Guardando…', null, statusTarget);
     try{
+      if(SB){
+        const fila = await sbRpc('viaje_guardar', {
+          p_estado: JSON.parse(JSON.stringify(STATE)),
+          p_clave: claveEdicion,
+          p_version: sbVersion
+        });
+        if(fila && typeof fila.version === 'number') sbVersion = fila.version;
+        setStatus('Guardado ✓ — ya lo ven todos los que tengan el link.' + (okNote ? ' ' + okNote : ''), 'ok', statusTarget);
+        return;
+      }
       const newHtml = PRISTINE_HTML.replace(
         /\/\*STATE_START\*\/[\s\S]*?\/\*STATE_END\*\//,
         '/*STATE_START*/' + JSON.stringify(STATE) + '/*STATE_END*/'
@@ -1051,13 +1304,18 @@
       await artifactCap.publish(newHtml);
       setStatus('Guardado ✓ — ya lo ven todos los que tengan el link.' + (okNote ? ' ' + okNote : ''), 'ok', statusTarget);
     } catch(err){
-      const code = err && err.code;
-      if(code === 'not_granted' || code === 'not_writer'){
+      const code = (err && err.code) ? String(err.code) : '';
+      if(code.indexOf('clave_incorrecta') >= 0){
+        setStatus('La clave de edición ya no sirve. Volvé a desbloquear arriba.', 'err', statusTarget);
+        bloquearEdicion();
+      } else if(code.indexOf('conflicto') >= 0 || code === 'conflict'){
+        setStatus('Alguien más guardó justo antes que vos; se trae esa versión y volvé a cargarlo.', 'err', statusTarget);
+        sbVersion = null;
+        sincronizar(true);
+      } else if(code === 'not_granted' || code === 'not_writer'){
         setStatus('No tenés permiso para editar esta página.', 'err', statusTarget);
         artifactCap = null;
         refreshEditability();
-      } else if(code === 'conflict'){
-        setStatus('Alguien más lo actualizó justo ahora; se está mostrando esa versión.', 'err', statusTarget);
       } else {
         setStatus('No se pudo guardar (' + (err && err.message ? err.message : 'error') + ').', 'err', statusTarget);
       }
@@ -1067,8 +1325,8 @@
   }
 
   function savePrice(ticker, newPrice, revertFn){
-    if(!artifactCap){
-      setStatus('Esta vista es de solo lectura: no se puede editar el precio acá.', 'err');
+    if(!puedeEditar()){
+      setStatus(MSG_SOLO_LECTURA('editar el precio'), 'err');
       revertFn();
       return;
     }
@@ -1077,8 +1335,8 @@
   }
 
   function saveAporteMonto(idx, newAmount, revertFn){
-    if(!artifactCap){
-      setStatus('Esta vista es de solo lectura: no se puede editar acá.', 'err');
+    if(!puedeEditar()){
+      setStatus(MSG_SOLO_LECTURA('editar'), 'err');
       revertFn();
       return;
     }
@@ -1087,8 +1345,8 @@
   }
 
   function toggleAporteConfirmado(idx, checked, revertFn){
-    if(!artifactCap){
-      setStatus('Esta vista es de solo lectura: no se puede editar acá.', 'err');
+    if(!puedeEditar()){
+      setStatus(MSG_SOLO_LECTURA('editar'), 'err');
       revertFn();
       return;
     }
@@ -1097,8 +1355,8 @@
   }
 
   function saveNewOp(newOp, okNote){
-    if(!artifactCap){
-      setStatus('Esta vista es de solo lectura: no se puede cargar operaciones acá.', 'err', 'op-status');
+    if(!puedeEditar()){
+      setStatus(MSG_SOLO_LECTURA('cargar operaciones'), 'err', 'op-status');
       return;
     }
     STATE.ops.push(newOp);
@@ -1106,8 +1364,8 @@
   }
 
   function saveEditedOp(idx, updatedOp, okNote){
-    if(!artifactCap){
-      setStatus('Esta vista es de solo lectura: no se puede editar acá.', 'err', 'op-status');
+    if(!puedeEditar()){
+      setStatus(MSG_SOLO_LECTURA('editar'), 'err', 'op-status');
       return;
     }
     const previous = STATE.ops[idx];
@@ -1116,8 +1374,8 @@
   }
 
   function deleteOp(idx){
-    if(!artifactCap){
-      setStatus('Esta vista es de solo lectura: no se puede eliminar acá.', 'err', 'log-status');
+    if(!puedeEditar()){
+      setStatus(MSG_SOLO_LECTURA('eliminar'), 'err', 'log-status');
       return;
     }
     const previous = STATE.ops[idx];
@@ -1127,8 +1385,8 @@
   }
 
   function saveFriendPayment(idx, friend, newAmount, revertFn){
-    if(!artifactCap){
-      setStatus('Esta vista es de solo lectura: no se puede editar acá.', 'err');
+    if(!puedeEditar()){
+      setStatus(MSG_SOLO_LECTURA('editar'), 'err');
       revertFn();
       return;
     }
@@ -1442,5 +1700,14 @@
   }
 
   render();
+
+  // Primera lectura de la base y sincronización cada 15s, para que cualquiera que
+  // tenga la página abierta vea lo que se fue cargando sin recargar a mano.
+  if(SB){
+    sincronizar(true);
+    setInterval(() => sincronizar(false), 15000);
+    document.addEventListener('visibilitychange', () => { if(!document.hidden) sincronizar(true); });
+    window.addEventListener('focus', () => sincronizar(true));
+  }
 })();
 </script>

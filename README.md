@@ -1,46 +1,64 @@
 # Viaje Pibardos — fondo del viaje
 
-Este repo tiene una foto (snapshot) del tracker del fondo del viaje: `index.html`, un solo archivo con todo adentro (HTML + CSS + JS), sin dependencias externas más que las tipografías de Google Fonts.
+Tracker del fondo del viaje: caución + trading, aportes de los amigos y bitácora de operaciones.
 
-## Importante: esto es una copia, no la página en vivo
+**La página:** https://franzunino2-dot.github.io/viaje-pibardos/
 
-El archivo `index.html` de este repo **no se autoactualiza**. La página que usás para cargar operaciones y ver los números al día es esta, siempre:
+Ese link es el bueno. Lo abre cualquiera sin cuenta de nada, y muestra siempre los últimos números.
 
+## Cómo se usa
+
+Cualquiera que abra el link **ve** todo: cartera, caución, aportes, bitácora y el simulador de cierre.
+
+Para **cargar** operaciones hay que desbloquear la edición: botón `🔒 Desbloquear edición`, arriba a la derecha, y poner la clave. Queda desbloqueado en ese browser (se guarda en `localStorage`), así que la clave se pone una sola vez por dispositivo.
+
+Con la edición desbloqueada se puede:
+
+- Cargar compras, ventas, tomas de caución y pagos de caución.
+- Editar el precio de hoy de cada ticker en la tabla de Cartera.
+- Cargar el monto de cada mes de aportes, tildarlos como confirmados y abrir el desglose por amigo.
+- Editar o eliminar operaciones mal cargadas desde la bitácora.
+
+Todo lo que se guarda se ve al instante para el resto: las páginas abiertas se refrescan solas cada 15 segundos y al volver a la pestaña.
+
+El **simulador de cierre** es la excepción: el dólar que pruebes ahí es solo tuyo, no se guarda ni lo ven los demás.
+
+## Cómo está armado
+
+- `index.html` — un solo archivo con todo adentro (HTML + CSS + JS), sin build step ni dependencias más que Google Fonts.
+- `supabase/schema.sql` — las tablas y funciones. Se corre una vez, es idempotente.
+- `supabase/seed.sql` — la carga inicial de datos (foto al 14/09/2026).
+
+El estado del fondo entero (operaciones, precios, aportes) vive como **un solo documento JSON** en la tabla `viaje_estado`, con la misma forma que el bloque `STATE` que la página tiene embebido. Ese bloque embebido sigue ahí a propósito: es el fallback si la base no contesta, y es lo que hace que el archivo siga funcionando solo.
+
+### Quién puede escribir
+
+- **Leer**: cualquiera. La policy de `SELECT` de `viaje_estado` está abierta.
+- **Escribir**: nadie directo. `viaje_estado` no tiene policies de `INSERT`/`UPDATE`/`DELETE`, así que la clave publicable que viaja en el browser no alcanza para escribir. La única puerta es la función `viaje_guardar()`, que es `SECURITY DEFINER` y exige la clave de edición; la clave vive en `viaje_config`, que tiene RLS prendido y cero policies (invisible desde el front).
+
+Para cambiar la clave de edición, una línea en el SQL Editor de Supabase:
+
+```sql
+update public.viaje_config set clave = 'la-nueva' where id = 'principal';
+```
+
+Hay que tener presente qué es y qué no es esto: frena que alguien toque los números por accidente o por curiosear, pero la clave viaja en el pedido cada vez que se guarda. No es un secreto fuerte y no protege contra alguien que se ponga a mirar el tráfico en serio. Para el uso que tiene —ocho amigos y un fondo de viaje— alcanza.
+
+### Concurrencia
+
+Cada guardado manda la `version` que leyó. Si alguien guardó entremedio, el guardado falla en vez de pisar los cambios del otro: la página avisa, trae la versión nueva y hay que volver a cargar la operación.
+
+## Poner otra base
+
+Los datos de conexión están en el bloque `window.VIAJE_CONFIG` arriba del script principal en `index.html`. La clave de ahí es la **publicable**, pensada para viajar en el browser; la `secret` nunca va al archivo. Vaciando los dos campos la página vuelve a correr sola con el `STATE` embebido.
+
+## Deploy
+
+GitHub Pages sobre `main`, carpeta raíz. Push a `main` = queda publicado en un minuto.
+
+## La versión vieja
+
+Antes de esto el tracker era un artifact de Claude que se republicaba a sí mismo:
 https://claude.ai/code/artifact/f7365ac3-ccc2-4e08-bd72-46b1cbea9f52
 
-Ahí es donde cargás compras, ventas, aportes, etc., y esos cambios se guardan solos. Este repo en cambio queda **congelado** en el momento en que se exportó — si después seguís operando en el link de arriba, este `index.html` no se entera. Es útil si querés que tus amigos vean el código en sí, tengan una copia de respaldo, o quieran levantar su propia página estática con los datos de hoy — pero para el día a día, seguí usando el link de Claude.
-
-Si en algún momento querés "refrescar" este repo con los datos más recientes, pedime el archivo actualizado de nuevo y reemplazá `index.html` acá, o hacé el mismo export vos mismo copiando el HTML de la página en vivo (Ctrl+U / "Ver código fuente" en el navegador, o guardando la página como HTML).
-
-## Cómo subirlo a GitHub
-
-Necesitás tener [git](https://git-scm.com/) instalado y una cuenta de GitHub. Los pasos, desde una terminal parada en esta carpeta:
-
-```bash
-git init
-git add index.html README.md
-git commit -m "Snapshot del tracker del fondo del viaje"
-```
-
-Después creá un repositorio nuevo y vacío en GitHub (botón "New repository" en https://github.com/new — no tildes "Add a README", ya tenés uno). Te va a dar dos líneas para conectar tu repo local, algo así (reemplazá `tu-usuario` y `nombre-del-repo` por los tuyos):
-
-```bash
-git remote add origin https://github.com/tu-usuario/nombre-del-repo.git
-git branch -M main
-git push -u origin main
-```
-
-## Cómo publicarlo como página web (GitHub Pages)
-
-Para que tus amigos puedan entrar con un link normal, sin clonar nada:
-
-1. En GitHub, andá a tu repo → **Settings** → **Pages** (menú de la izquierda).
-2. En "Build and deployment" → "Source", elegí **Deploy from a branch**.
-3. En "Branch", elegí **main** y la carpeta **/ (root)**. Guardá.
-4. Esperá un minuto y GitHub te va a dar un link tipo `https://tu-usuario.github.io/nombre-del-repo/`.
-
-Ese link va a mostrar el `index.html` tal cual está en el repo — **de solo lectura, sin el botón de autoguardado** (esa parte es específica de las páginas publicadas dentro de Claude). Si algún amigo edita un precio ahí, no pasa nada — no hay backend que lo guarde.
-
-## Usarlo con Claude Code
-
-Si querés seguir iterando sobre este archivo con Claude Code en vez de acá en el chat: abrí esta carpeta como proyecto (`claude` desde la terminal, parado en la carpeta del repo) y pedile que edite `index.html` directamente. Los cambios los vas a tener que commitear y pushear vos (`git add`, `git commit`, `git push`) para que se reflejen en GitHub Pages — Claude Code no te va a hostear nada solo, ni tampoco tenés ahí la capacidad de autoguardado que sí tiene la página en Claude.
+Ese link sigue existiendo pero ya no es el que vale — quedó congelado y los que entraban veían una versión vieja fijada. El código para republicarse sigue en el archivo como camino alternativo: si se vacía `VIAJE_CONFIG`, la página vuelve a guardarse como artifact.
