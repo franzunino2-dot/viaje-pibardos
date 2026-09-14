@@ -1033,6 +1033,24 @@ window.VIAJE_CONFIG = {
     }
   }
 
+  // Si la clave guardada en este browser ya no es la de la base (porque la
+  // cambiaron), no tiene sentido mostrar la pagina como editable: se limpia y
+  // se vuelve a pedir, en vez de que te enteres recien al intentar guardar.
+  async function revalidarClave(){
+    if(!SB || !claveEdicion) return;
+    try{
+      const ok = await sbRpc('viaje_clave_ok', { p_clave: claveEdicion });
+      if(ok !== true){
+        claveEdicion = null;
+        try { localStorage.removeItem(CLAVE_LS); } catch(e){}
+        setLockNote('La clave cambio: volve a desbloquear.', 'err');
+        refreshEditability();
+      }
+    } catch(e){
+      // sin conexion no se puede saber: se deja como esta y ya fallara al guardar
+    }
+  }
+
   function bloquearEdicion(){
     claveEdicion = null;
     try { localStorage.removeItem(CLAVE_LS); } catch(e){}
@@ -1705,6 +1723,7 @@ window.VIAJE_CONFIG = {
   // tenga la página abierta vea lo que se fue cargando sin recargar a mano.
   if(SB){
     sincronizar(true);
+    revalidarClave();
     setInterval(() => sincronizar(false), 15000);
     document.addEventListener('visibilitychange', () => { if(!document.hidden) sincronizar(true); });
     window.addEventListener('focus', () => sincronizar(true));
