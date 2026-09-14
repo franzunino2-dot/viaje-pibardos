@@ -97,7 +97,10 @@ begin
   where id = 'principal';
 
   if p_version is not null and v_actual is not null and v_actual <> p_version then
-    raise exception 'conflicto' using errcode = '40001';
+    -- PT409: PostgREST lo traduce a HTTP 409. NO usar 40001 (serialization_failure):
+    -- ese codigo significa 'transitorio, reintentame' y hace que el pedido se cuelgue
+    -- reintentando hasta dar timeout en vez de devolver el error.
+    raise exception 'conflicto' using errcode = 'PT409';
   end if;
 
   insert into public.viaje_estado (id, estado, version, actualizado_en, actualizado_por)
