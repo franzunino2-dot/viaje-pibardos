@@ -640,7 +640,7 @@
             <th>Ticker</th>
             <th>VN en cartera</th>
             <th>Costo prom.</th>
-            <th style="text-align:right;">Precio hoy</th>
+            <th style="text-align:right;">Precio hoy ($)</th>
             <th>Valor hoy</th>
             <th>Resultado</th>
           </tr>
@@ -648,7 +648,7 @@
         <tbody id="cartera-body"></tbody>
       </table>
     </div>
-    <div class="note">Editá el precio de hoy vos mismo cuando cierre el mercado o cuando operes — se guarda solo y ya lo ve cualquiera que tenga el link.<div class="save-status" id="save-status"></div></div>
+    <div class="note">Editá el precio de hoy vos mismo cuando cierre el mercado o cuando operes — se guarda solo y ya lo ve cualquiera que tenga el link. Los precios van <strong>en pesos por unidad de VN</strong>: un bono que cotiza 96,00% se carga como 0,96.<div class="save-status" id="save-status"></div></div>
   </section>
 
   <section>
@@ -682,8 +682,8 @@
           <input type="text" inputmode="numeric" id="op-vn" class="price-input" placeholder="ej: 500000">
         </div>
         <div class="field op-f-precio">
-          <label for="op-precio">Precio (%)</label>
-          <input type="text" inputmode="decimal" id="op-precio" class="price-input" placeholder="ej: 96.00">
+          <label for="op-precio">Precio ($)</label>
+          <input type="text" inputmode="decimal" id="op-precio" class="price-input" placeholder="ej: 0,9600">
         </div>
         <div class="field op-f-monto" hidden>
           <label for="op-monto">Monto ($)</label>
@@ -807,6 +807,20 @@ window.VIAJE_CONFIG = {
   const fmt = n => Math.round(n).toLocaleString('es-AR');
   const money = n => (n<0? '-$' + fmt(Math.abs(n)) : '$' + fmt(n));
   const pctStr = n => (n*100).toLocaleString('es-AR',{minimumFractionDigits:2, maximumFractionDigits:2}) + '%';
+  // Los precios se guardan y se muestran en PESOS por unidad de VN. Un bono que en
+  // pantalla de mercado cotiza "82,23%" acá son $0,8223: el mismo número con la coma
+  // corrida dos lugares a la izquierda. Una acción a $12.788,66 va tal cual.
+  const precioStr = n => '$' + Number(n).toLocaleString('es-AR',{minimumFractionDigits:2, maximumFractionDigits:4});
+  // Para meter en un <input>: sin separador de miles y sin ceros de relleno al final.
+  const precioInput = n => String(Number(Number(n).toFixed(6)));
+  // Acepta las dos formas de escribir un precio:
+  //   "13.250,50" (es-AR)   -> si hay coma, el punto es separador de miles
+  //   "13250.50"  (sin coma) -> el punto es el decimal
+  // Sin esta distinción, parseFloat('13.250.50') devolvía 13,25 sin avisar.
+  const parsePrecio = s => {
+    const t = String(s).replace(/[$\s%]/g, '');
+    return parseFloat(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t);
+  };
   const fmtDateShort = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
   const parseDate = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); };
 
@@ -1254,7 +1268,7 @@ window.VIAJE_CONFIG = {
     if(o.tipo==='compra' || o.tipo==='venta'){
       document.getElementById('op-ticker').value = o.ticker;
       document.getElementById('op-vn').value = fmt(o.vn);
-      document.getElementById('op-precio').value = (o.precio*100).toFixed(2);
+      document.getElementById('op-precio').value = precioInput(o.precio);
     } else if(o.tipo==='caucion'){
       document.getElementById('op-monto').value = fmt(o.monto);
       document.getElementById('op-tasa').value = (o.rate*100).toFixed(2);
@@ -1292,7 +1306,7 @@ window.VIAJE_CONFIG = {
     if(tipo==='compra' || tipo==='venta'){
       const ticker = document.getElementById('op-ticker').value.trim().toUpperCase();
       const vn = parseFloat(document.getElementById('op-vn').value.replace(/[.\s]/g,'').replace(',', '.'));
-      const precio = parseFloat(document.getElementById('op-precio').value.replace(',', '.'));
+      const precio = parsePrecio(document.getElementById('op-precio').value);
       if(!ticker || isNaN(vn) || vn<=0 || isNaN(precio) || precio<=0){
         setStatus('Completá ticker, VN y precio válidos.', 'err', 'op-status');
         return;
@@ -1300,7 +1314,7 @@ window.VIAJE_CONFIG = {
       const detalleDefault = tipo==='compra'
         ? `Compra de ${ticker}.`
         : `Venta de ${ticker}.`;
-      newOp = { date: fecha, tipo, ticker, vn, precio: precio/100, detalle: detalleInput || detalleDefault };
+      newOp = { date: fecha, tipo, ticker, vn, precio, detalle: detalleInput || detalleDefault };
     } else if(tipo==='caucion'){
       const monto = parseFloat(document.getElementById('op-monto').value.replace(/[.\s]/g,'').replace(',', '.'));
       const tasa = parseFloat(document.getElementById('op-tasa').value.replace(',', '.'));
@@ -1582,11 +1596,11 @@ window.VIAJE_CONFIG = {
       tr.innerHTML = `
         <td>${t}</td>
         <td class="num">${fmt(h.vn)}</td>
-        <td class="num">${pctStr(h.avgPrecio)}</td>
+        <td class="num">${precioStr(h.avgPrecio)}</td>
         <td>
           <div class="price-cell">
-            <input class="price-input" type="text" inputmode="decimal" data-ticker="${t}" value="${(precioHoy*100).toFixed(2)}">
-            <span>%</span>
+            <span>$</span>
+            <input class="price-input" style="width:94px;" type="text" inputmode="decimal" data-ticker="${t}" value="${precioInput(precioHoy)}">
           </div>
         </td>
         <td class="num">${money(valorHoy)}</td>
@@ -1597,15 +1611,14 @@ window.VIAJE_CONFIG = {
     carteraBody.querySelectorAll('.price-input').forEach(inp=>{
       inp.addEventListener('change', () => {
         const ticker = inp.dataset.ticker;
-        const raw = inp.value.replace(',', '.').replace('%','').trim();
-        const val = parseFloat(raw);
+        const val = parsePrecio(inp.value);
         const previous = STATE.prices[ticker];
         if(isNaN(val) || val<=0){
-          setStatus('Ingresá un precio válido, por ejemplo 94.30.', 'err');
-          inp.value = (previous*100).toFixed(2);
+          setStatus('Ingresá un precio válido en pesos, por ejemplo 0,9430.', 'err');
+          inp.value = precioInput(previous);
           return;
         }
-        savePrice(ticker, val/100, () => { inp.value = (previous*100).toFixed(2); });
+        savePrice(ticker, val, () => { inp.value = precioInput(previous); });
       });
     });
 
