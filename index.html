@@ -239,6 +239,12 @@
     padding-top:22px;
     user-select:none;
   }
+  .stat-value .stat-pct{
+    font-size:14px;
+    font-weight:500;
+    opacity:.8;
+    white-space:nowrap;
+  }
   .stat.is-eco .stat-value{
     font-size:16px;
     font-weight:500;
@@ -904,7 +910,9 @@ window.VIAJE_CONFIG = {
         }
         const opPL = o.vn*o.precio - costRemoved;
         realizedPL += opPL;
-        realizedByOp.set(o, opPL);
+        // Se guarda tambien el costo que se dio de baja en esta venta: sin eso no se
+        // puede decir que % fue la ganancia (el % es contra lo que costo comprar eso).
+        realizedByOp.set(o, { pl: opPL, costo: costRemoved });
       }
     }
     const holdings = {};
@@ -926,7 +934,10 @@ window.VIAJE_CONFIG = {
     const rows = tranches.map(c=>{
       const myPagos = pagos.filter(p=>(p.caucionId||c.caucionId)===c.caucionId)
         .map(p=>({date:p.date, amount:p.amount}));
-      const pagado = myPagos.reduce((s,p)=>s+p.amount,0);
+      // Solo los pagos que YA ocurrieron. Sin este filtro, un mes fechado a futuro
+      // se restaba del capital pero no del saldo, y la diferencia aparecía inflando
+      // el "interés acumulado" (llegó a mostrar $1.034.222 en vez de $42.222).
+      const pagado = myPagos.filter(p=>p.date<=uptoDate).reduce((s,p)=>s+p.amount,0);
       const { bal: saldoHoy, excess } = simulateTranche(c.monto, c.date, c.rate, myPagos, uptoDate);
       const interesAcum = saldoHoy - (c.monto - (pagado - excess));
       total += saldoHoy;
@@ -1514,8 +1525,12 @@ window.VIAJE_CONFIG = {
     }
     const resultadoNoRealizado = valorHoldings - costoCartera;
     const resultadoRealizado = pos.realizedPL;
+    // Un mes cuenta como aporte recién cuando llega su fecha (el 10), que es el mismo
+    // día en que se le descuenta a la caución. Las dos cosas tienen que moverse juntas:
+    // si contara antes, el capital subiría sin que baje la deuda y la ganancia saldría
+    // mal por ese mismo monto, para después pegar un salto el día 10.
     const aportesConfirmados = s.ops.filter(o=>o.tipo==='aporte' && o.date<=TODAY).reduce((sum,o)=>sum+o.monto,0)
-      + s.aportesMensuales.reduce((sum,a)=>sum+monthEffectiveAmount(a),0);
+      + s.aportesMensuales.filter(a=>a.date<=TODAY).reduce((sum,a)=>sum+monthEffectiveAmount(a),0);
     const interesCaucionTotal = cauc.rows.reduce((sum,r)=>sum+r.interesAcum,0);
     const capitalCaucionTotal = cauc.rows.reduce((sum,r)=>sum+r.monto,0);
     // capital total puesto en juego: lo que aportaron los amigos + la caución tomada
@@ -1560,10 +1575,14 @@ window.VIAJE_CONFIG = {
       'lo que vale hoy: ' + money(valorHoldings) + ' en posiciones + ' + money(cashDisponible) + ' en efectivo';
 
     const gananciaEl = document.getElementById('stat-ganancia');
-    gananciaEl.textContent = (gananciaTotal>=0?'+':'') + money(gananciaTotal);
+    const gananciaPct = aportesConfirmados>0
+      ? (gananciaTotal>=0?'+':'') + pctStr(gananciaTotal/aportesConfirmados)
+      : '';
+    gananciaEl.innerHTML = (gananciaTotal>=0?'+':'') + money(gananciaTotal) +
+      (gananciaPct ? ' <span class="stat-pct">' + gananciaPct + '</span>' : '');
     gananciaEl.className = 'stat-value num' + (gananciaTotal>=0?' pos':' neg');
     document.getElementById('stat-ganancia-note').textContent =
-      (aportesConfirmados>0 ? (gananciaTotal>=0?'+':'') + pctStr(gananciaTotal/aportesConfirmados) + ' sobre lo que pusieron los amigos · ' : '') +
+      (gananciaPct ? 'sobre los ' + money(aportesConfirmados) + ' que pusieron los amigos · ' : '') +
       'trading ' + (resultadoRealizado+resultadoNoRealizado>=0?'+':'') + money(resultadoRealizado+resultadoNoRealizado) +
       (interesCaucionTotal>0 ? ' − ' + money(interesCaucionTotal) + ' de interés de caución' : '');
 
@@ -1664,8 +1683,10 @@ window.VIAJE_CONFIG = {
              <span>$</span>
              <input class="amount-input price-input" style="width:96px; text-align:right;" type="text" inputmode="numeric" data-idx="${idx}" value="${fmt(r.amount)}">
            </div>`;
+      // Un mes ya cargado pero con fecha futura todavía no cuenta: se avisa cuándo entra.
+      const yaEntro = r.date <= TODAY;
       const estadoCell = fSum>0
-        ? `<span class="pill pill-confirmado">Confirmado</span>`
+        ? `<span class="pill ${yaEntro?'pill-confirmado':'pill-estimado'}">${yaEntro?'Confirmado':'Entra el '+fmtDateShort(r.date)}</span>`
         : `<label class="confirm-toggle" style="display:flex; align-items:center; gap:6px; cursor:pointer;">
              <input type="checkbox" class="confirm-checkbox" data-idx="${idx}" ${r.confirmado?'checked':''}>
              <span class="pill ${r.confirmado?'pill-confirmado':'pill-estimado'}">${r.confirmado?'Confirmado':'Estimado'}</span>
@@ -1766,10 +1787,11 @@ window.VIAJE_CONFIG = {
         div.className = 'log-item';
         let detalleHtml = o.detalle;
         if(o.tipo==='venta' && pos.realizedByOp.has(o)){
-          const pl = pos.realizedByOp.get(o);
+          const { pl, costo } = pos.realizedByOp.get(o);
           const closed = !pos.holdings[o.ticker];
           const plCls = pl>=0 ? 'pill-confirmado' : 'pill-loss';
-          detalleHtml += ` <span class="pill ${plCls}">${closed ? 'Posición cerrada' : 'Venta parcial'} &middot; ${pl>=0?'+':''}${money(pl)}</span>`;
+          const plPct = costo>0 ? ` (${pl>=0?'+':''}${pctStr(pl/costo)})` : '';
+          detalleHtml += ` <span class="pill ${plCls}">${closed ? 'Posición cerrada' : 'Venta parcial'} &middot; ${pl>=0?'+':''}${money(pl)}${plPct}</span>`;
         }
         const isPendingDelete = pendingDeleteIdx === idx;
         const actionsHtml = isPendingDelete
