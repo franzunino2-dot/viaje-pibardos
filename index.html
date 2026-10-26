@@ -398,6 +398,7 @@
   @media (max-width:720px){
     .op-form{grid-template-columns:repeat(2,1fr);}
   }
+  .field-hint{font-size:11px; color:var(--muted); min-height:1.3em;}
   .save-status{font-size:11.5px; color:var(--muted); margin-top:8px; min-height:1.4em;}
   .save-status.ok{color:var(--teal);}
   .save-status.err{color:var(--accent);}
@@ -683,17 +684,18 @@
           <label for="op-ticker">Ticker</label>
           <input type="text" id="op-ticker" class="price-input" value="TZXS8">
         </div>
-        <div class="field op-f-vn">
-          <label for="op-vn">VN</label>
-          <input type="text" inputmode="numeric" id="op-vn" class="price-input" placeholder="ej: 500000">
+        <div class="field op-f-monto" hidden>
+          <label for="op-monto">Monto ($)</label>
+          <input type="text" inputmode="numeric" id="op-monto" class="price-input" placeholder="ej: 2.000.000">
         </div>
         <div class="field op-f-precio">
           <label for="op-precio">Precio ($)</label>
           <input type="text" inputmode="decimal" id="op-precio" class="price-input" placeholder="ej: 0,9600">
         </div>
-        <div class="field op-f-monto" hidden>
-          <label for="op-monto">Monto ($)</label>
-          <input type="text" inputmode="numeric" id="op-monto" class="price-input" placeholder="ej: 2000000">
+        <div class="field op-f-vn">
+          <label for="op-vn">Nominales (VN)</label>
+          <input type="text" inputmode="numeric" id="op-vn" class="price-input" placeholder="monto ÷ precio">
+          <div class="field-hint" id="op-vn-hint">se calcula solo</div>
         </div>
         <div class="field op-f-tasa" hidden>
           <label for="op-tasa">Tasa anual (%)</label>
@@ -1239,12 +1241,57 @@ window.VIAJE_CONFIG = {
 
   // ---- formulario "Cargar operación": se conecta una sola vez, no en cada render() ----
   const OP_FIELDS = {
-    compra:       ['ticker','vn','precio'],
-    venta:        ['ticker','vn','precio'],
+    compra:       ['ticker','monto','precio','vn'],
+    venta:        ['ticker','monto','precio','vn'],
     caucion:      ['monto','tasa'],
     pago_caucion: ['monto'],
     aporte:       ['monto']
   };
+
+  // --- Monto <-> Nominales ---------------------------------------------------
+  // La idea es cargar diciendo "puse $2.000.000 a tal precio" sin calcular los
+  // nominales a mano. Funciona en los dos sentidos: si escribís los nominales, te
+  // calcula el monto. `ultimoEditado` decide cuál manda cuando cambia el precio.
+  let ultimoEditado = 'monto';
+  const leerNum = s => parseFloat(String(s).replace(/[.\s$]/g,'').replace(',', '.'));
+
+  function sincronizarMontoVn(origen){
+    const tipo = document.getElementById('op-tipo').value;
+    if(tipo !== 'compra' && tipo !== 'venta') return;
+    const eMonto = document.getElementById('op-monto');
+    const eVn = document.getElementById('op-vn');
+    const ePrecio = document.getElementById('op-precio');
+    const hint = document.getElementById('op-vn-hint');
+    if(!eMonto || !eVn || !ePrecio) return;
+    if(origen === 'monto' || origen === 'vn') ultimoEditado = origen;
+    const precio = parsePrecio(ePrecio.value);
+    if(!isFinite(precio) || precio <= 0){
+      if(hint) hint.textContent = 'poné el precio y se calcula';
+      return;
+    }
+    if(ultimoEditado === 'monto'){
+      const monto = leerNum(eMonto.value);
+      if(!isFinite(monto) || monto <= 0){
+        if(hint) hint.textContent = 'se calcula solo';
+        return;
+      }
+      const vn = Math.round(monto / precio);
+      eVn.value = fmt(vn);
+      // Los nominales se redondean, asi que el monto real puede quedar unos pesos
+      // corrido de lo que escribiste: se muestra para que no sea una sorpresa.
+      if(hint){
+        const real = vn * precio;
+        hint.textContent = Math.abs(real - monto) < 1
+          ? 'queda justo en ' + money(real)
+          : 'queda en ' + money(real) + ' (los nominales van redondeados)';
+      }
+    } else {
+      const vn = leerNum(eVn.value);
+      if(!isFinite(vn) || vn <= 0) return;
+      eMonto.value = fmt(vn * precio);
+      if(hint) hint.textContent = 'monto calculado desde los nominales';
+    }
+  }
 
   function updateOpFormFields(){
     const tipo = document.getElementById('op-tipo').value;
@@ -1263,6 +1310,9 @@ window.VIAJE_CONFIG = {
   }
 
   function clearOpFormInputs(){
+    ultimoEditado = 'monto';
+    const hint = document.getElementById('op-vn-hint');
+    if(hint) hint.textContent = 'se calcula solo';
     document.getElementById('op-vn').value = '';
     document.getElementById('op-precio').value = '';
     document.getElementById('op-monto').value = '';
@@ -1279,7 +1329,9 @@ window.VIAJE_CONFIG = {
     if(o.tipo==='compra' || o.tipo==='venta'){
       document.getElementById('op-ticker').value = o.ticker;
       document.getElementById('op-vn').value = fmt(o.vn);
+      document.getElementById('op-monto').value = fmt(o.vn * o.precio);
       document.getElementById('op-precio').value = precioInput(o.precio);
+      ultimoEditado = 'vn';   // al editar manda lo que ya estaba guardado
     } else if(o.tipo==='caucion'){
       document.getElementById('op-monto').value = fmt(o.monto);
       document.getElementById('op-tasa').value = (o.rate*100).toFixed(2);
@@ -1316,10 +1368,15 @@ window.VIAJE_CONFIG = {
     let newOp = null;
     if(tipo==='compra' || tipo==='venta'){
       const ticker = document.getElementById('op-ticker').value.trim().toUpperCase();
-      const vn = parseFloat(document.getElementById('op-vn').value.replace(/[.\s]/g,'').replace(',', '.'));
       const precio = parsePrecio(document.getElementById('op-precio').value);
-      if(!ticker || isNaN(vn) || vn<=0 || isNaN(precio) || precio<=0){
-        setStatus('Completá ticker, VN y precio válidos.', 'err', 'op-status');
+      let vn = leerNum(document.getElementById('op-vn').value);
+      const montoIngresado = leerNum(document.getElementById('op-monto').value);
+      // Con monto y precio alcanza: los nominales salen de ahi.
+      if((!isFinite(vn) || vn<=0) && isFinite(montoIngresado) && montoIngresado>0 && isFinite(precio) && precio>0){
+        vn = Math.round(montoIngresado / precio);
+      }
+      if(!ticker || !isFinite(vn) || vn<=0 || !isFinite(precio) || precio<=0){
+        setStatus('Completá ticker, precio, y monto o nominales.', 'err', 'op-status');
         return;
       }
       const detalleDefault = tipo==='compra'
@@ -1386,7 +1443,14 @@ window.VIAJE_CONFIG = {
     const opFormEl = document.getElementById('op-form');
     const opCancelEdit = document.getElementById('op-cancel-edit');
     if(opFecha) opFecha.value = new Date().toISOString().slice(0,10);
-    if(opTipo){ opTipo.addEventListener('change', updateOpFormFields); updateOpFormFields(); }
+    if(opTipo){
+      opTipo.addEventListener('change', () => { updateOpFormFields(); sincronizarMontoVn('precio'); });
+      updateOpFormFields();
+    }
+    [['op-monto','monto'], ['op-vn','vn'], ['op-precio','precio']].forEach(([id, origen]) => {
+      const el = document.getElementById(id);
+      if(el) el.addEventListener('input', () => sincronizarMontoVn(origen));
+    });
     if(opFormEl) opFormEl.addEventListener('submit', handleOpSubmit);
     if(opCancelEdit) opCancelEdit.addEventListener('click', () => { cancelEditOp(); setStatus('', null, 'op-status'); });
   }
@@ -1780,7 +1844,9 @@ window.VIAJE_CONFIG = {
     // pos.realizedByOp.get(o) matchee por referencia, y su índice coincide 1 a 1 con STATE.ops.
     s.ops
       .map((o, idx) => ({ o, idx }))
-      .sort((a, b) => a.o.date - b.o.date)
+      // La ultima operacion arriba. El desempate por idx hace que, dentro de un
+      // mismo dia, lo ultimo cargado tambien quede primero.
+      .sort((a, b) => (b.o.date - a.o.date) || (b.idx - a.idx))
       .forEach(({ o, idx }) => {
         const meta = TAGS[o.tipo];
         const div = document.createElement('div');
